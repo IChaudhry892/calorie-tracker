@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/*
+ * Permanent dark theme (F8) — hex codes taken from the `.dark-mode` block in
+ * Portfolio/styles/styles.css. There is no light theme and no toggle.
+ *
+ * Each token becomes a Tailwind utility, e.g. `bg-background`, `bg-surface`,
+ * `text-foreground`, `text-heading`, `text-accent`, `border-accent`,
+ * `bg-accent-secondary`, `hover:text-accent-hover`.
+ */
+@theme {
+  --color-background: #2c2d32; /* page background */
+  --color-surface: #36373e; /* cards, tables, inputs */
+  --color-foreground: #f2f2f2; /* main text */
+  --color-heading: #ffffff; /* headings */
+  --color-accent: #97c8da; /* primary accent: borders, underlines, highlights */
+  --color-accent-secondary: #3ca0d0; /* buttons, icons, gradient end */
+  --color-accent-hover: #99e6ff; /* hover state for links/icons */
+
+  --font-sans: var(--font-poppins), Arial, sans-serif;
+}
+
+:root {
+  /* Native form controls, scrollbars and date pickers render dark too. */
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
