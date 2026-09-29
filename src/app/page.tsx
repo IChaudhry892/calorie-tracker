@@ -1,4 +1,12 @@
-export default function Home() {
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function Home() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  if (data?.claims) redirect("/log");
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 text-center">
       <h1 className="text-4xl font-semibold text-heading">Calorie Tracker</h1>
@@ -6,12 +14,12 @@ export default function Home() {
       <p className="max-w-md text-lg">
         Track calories and protein, build diet plans, and calculate your daily needs.
       </p>
-      <div className="rounded-2xl border-2 border-accent bg-surface px-6 py-4">
-        <span className="text-accent-secondary">Theme check:</span>{" "}
-        <a href="#" className="transition-colors hover:text-accent-hover">
-          hover me
-        </a>
-      </div>
+      <Link
+        href="/login"
+        className="rounded-lg bg-accent-secondary px-6 py-2 font-medium text-heading transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        Log in
+      </Link>
     </main>
   );
 }
