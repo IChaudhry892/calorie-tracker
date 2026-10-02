@@ -1,14 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { signIn, signInWithGoogle, signUp, type AuthState } from "./actions";
-
-const inputClass =
-  "w-full rounded-lg border border-accent/40 bg-background px-3 py-2 text-foreground outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/50";
-const primaryButton =
-  "w-full rounded-lg bg-accent-secondary px-4 py-2 font-medium text-heading transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50";
-const secondaryButton =
-  "w-full rounded-lg border-2 border-accent px-4 py-2 font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50";
 
 export function LoginForm({ next, initialError }: { next: string; initialError?: string }) {
   const [signInState, signInAction, signInPending] = useActionState(signIn, {});
@@ -27,33 +22,30 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
     <div className="flex flex-col gap-6">
       <form className="flex flex-col gap-4">
         <input type="hidden" name="next" value={next} />
-        <div className="flex flex-col gap-1">
-          <label htmlFor="email" className="text-sm font-medium">
-            Email
-          </label>
-          <input id="email" name="email" type="email" autoComplete="email" required className={inputClass} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="password" className="text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            minLength={6}
-            required
-            className={inputClass}
-          />
-        </div>
+        <Input label="Email" id="email" name="email" type="email" autoComplete="email" required />
+        <Input
+          label="Password"
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          minLength={6}
+          required
+        />
         <div className="flex flex-col gap-2 pt-2">
-          <button formAction={signInAction} onClick={() => setLast("signIn")} disabled={pending} className={primaryButton}>
+          <Button type="submit" formAction={signInAction} onClick={() => setLast("signIn")} disabled={pending} className="w-full">
             {signInPending ? "Signing in…" : "Sign in"}
-          </button>
-          <button formAction={signUpAction} onClick={() => setLast("signUp")} disabled={pending} className={secondaryButton}>
+          </Button>
+          <Button
+            type="submit"
+            variant="secondary"
+            formAction={signUpAction}
+            onClick={() => setLast("signUp")}
+            disabled={pending}
+            className="w-full"
+          >
             {signUpPending ? "Creating account…" : "Create account"}
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -65,9 +57,9 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
 
       <form action={googleAction} onSubmit={() => setLast("google")}>
         <input type="hidden" name="next" value={next} />
-        <button disabled={pending} className={secondaryButton}>
+        <Button type="submit" variant="secondary" disabled={pending} className="w-full">
           {googlePending ? "Redirecting…" : "Continue with Google"}
-        </button>
+        </Button>
       </form>
 
       <p aria-live="polite" role="status" className="min-h-6 text-center text-sm">

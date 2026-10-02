@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 
@@ -11,6 +11,11 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Calorie Tracker",
   description: "Track your calories and protein, plan diets, and calculate your caloric needs.",
+};
+
+// "cover" lets the mobile tab bar extend under the iPhone home indicator (padded via safe-area insets).
+export const viewport: Viewport = {
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
