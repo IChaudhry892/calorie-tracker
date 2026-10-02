@@ -15,7 +15,7 @@ const icon = (path: ReactNode) => (
 const TABS = [
   {
     href: "/log",
-    label: "Today",
+    label: "Daily Log",
     icon: icon(
       <>
         <rect x="3" y="5" width="18" height="16" rx="2" />
