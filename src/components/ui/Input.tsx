@@ -1,7 +1,9 @@
 import { useId, type ComponentProps, type ReactNode } from "react";
 
+// The focus ring is inset: an outer box-shadow can leave a 1px sliver behind
+// on blur at fractional display scaling (e.g. 125%), where Chrome under-repaints.
 export const fieldClasses =
-  "w-full rounded-lg border border-accent/40 bg-background px-3 py-2 text-foreground outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/50 aria-invalid:border-red-300";
+  "w-full rounded-lg border border-accent/40 bg-background px-3 py-2 text-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-inset focus:ring-accent aria-invalid:border-red-300";
 
 export type FieldExtras = { label: string; hint?: string; error?: string };
 
