@@ -67,9 +67,14 @@ function inRange(n: number | null, [min, max]: readonly [number, number]): n is 
   return n !== null && n >= min && n <= max;
 }
 
-/** One decimal at most, without trailing zeros. */
+/** Rounded to the 2 decimals the profile stores (and Save sends). */
+function round2(n: number): number {
+  return Number(n.toFixed(2));
+}
+
+/** Two decimals at most, without trailing zeros (57.15 → "57.15", 80 → "80"). */
 function trim(n: number): string {
-  return Number(n.toFixed(1)).toString();
+  return round2(n).toString();
 }
 
 function imperialFromMetric(heightCm: string, weightKg: string) {
@@ -93,7 +98,11 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
   const [age, setAge] = useState(profile?.age?.toString() ?? "");
   const [heightCm, setHeightCm] = useState(profile?.height_cm != null ? trim(profile.height_cm) : "");
   const [weightKg, setWeightKg] = useState(profile?.weight_kg != null ? trim(profile.weight_kg) : "");
-  const initialImperial = imperialFromMetric(heightCm, weightKg);
+  // From the exact saved values, not the display strings, so 57.15 kg comes back as 126 lb.
+  const initialImperial = imperialFromMetric(
+    profile?.height_cm?.toString() ?? "",
+    profile?.weight_kg?.toString() ?? "",
+  );
   const [ft, setFt] = useState(initialImperial.ft);
   const [inches, setInches] = useState(initialImperial.inches);
   const [lb, setLb] = useState(initialImperial.lb);
@@ -103,13 +112,15 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
 
   // Everything below works in metric; imperial is converted here.
   const metric = useMemo(() => {
-    if (unitSystem === "metric") return { heightCm: parse(heightCm), weightKg: parse(weightKg) };
+    // Rounded like the saved values, so the live result is exactly what Save stores.
+    const rounded = (n: number | null) => (n === null ? null : round2(n));
+    if (unitSystem === "metric") return { heightCm: rounded(parse(heightCm)), weightKg: rounded(parse(weightKg)) };
     const f = parse(ft);
     const i = inches.trim() === "" ? 0 : parse(inches);
     const p = parse(lb);
     return {
-      heightCm: f === null || i === null ? null : ftInToCm(f, i),
-      weightKg: p === null ? null : lbToKg(p),
+      heightCm: f === null || i === null ? null : round2(ftInToCm(f, i)),
+      weightKg: p === null ? null : round2(lbToKg(p)),
     };
   }, [unitSystem, heightCm, weightKg, ft, inches, lb]);
 
@@ -163,6 +174,17 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
     }
     setUnitSystem(next);
   }
+
+  // Whether the form differs from what's stored, so "Saved: N" is never mistaken for the current result.
+  const unsaved =
+    profile?.maintenance_calories != null &&
+    (!results ||
+      unitSystem !== profile.unit_system ||
+      results.body.sex !== profile.sex ||
+      results.body.age !== profile.age ||
+      results.body.heightCm !== Number(profile.height_cm) ||
+      results.body.weightKg !== Number(profile.weight_kg) ||
+      activity !== profile.activity_level);
 
   const rateUnit = unitSystem === "metric" ? "kg" : "lb";
   const goals = results?.goals ?? [];
@@ -358,8 +380,8 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
               <input type="hidden" name="unit_system" value={unitSystem} />
               <input type="hidden" name="sex" value={sex} />
               <input type="hidden" name="age" value={results.body.age} />
-              <input type="hidden" name="height_cm" value={results.body.heightCm.toFixed(2)} />
-              <input type="hidden" name="weight_kg" value={results.body.weightKg.toFixed(2)} />
+              <input type="hidden" name="height_cm" value={results.body.heightCm} />
+              <input type="hidden" name="weight_kg" value={results.body.weightKg} />
               <input type="hidden" name="activity_level" value={activity} />
             </>
           )}
@@ -368,7 +390,10 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
               {savePending ? "Saving…" : "Save"}
             </Button>
             {profile?.maintenance_calories != null && (
-              <span className="text-sm text-foreground/70">Saved: {profile.maintenance_calories} kcal/day</span>
+              <span className="text-sm text-foreground/70">
+                Saved: {profile.maintenance_calories} kcal/day
+                {unsaved && <span className="text-accent"> · unsaved changes</span>}
+              </span>
             )}
           </div>
           <p aria-live="polite" role="status" className="min-h-6 text-sm">

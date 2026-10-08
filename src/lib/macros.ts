@@ -3,7 +3,14 @@ import type { Food } from "@/lib/db";
 export type Macros = { calories: number; protein_g: number };
 
 /** One row of a diet or day: what MacroTable renders. */
-export type MacroRow = Macros & { id: string; name: string; quantity: number; unit: string };
+export type MacroRow = Macros & {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  /** Optional small label after the name, e.g. "from Lean bulk". */
+  tag?: string;
+};
 
 /** Macros for `quantity` of a food, in the food's own serving unit. Unrounded. */
 export function scaleMacros(

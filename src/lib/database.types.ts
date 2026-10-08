@@ -141,6 +141,7 @@ export type Database = {
         Row: {
           calories: number
           created_at: string
+          diet_id: string | null
           food_id: string | null
           id: string
           log_date: string
@@ -154,6 +155,7 @@ export type Database = {
         Insert: {
           calories: number
           created_at?: string
+          diet_id?: string | null
           food_id?: string | null
           id?: string
           log_date: string
@@ -167,6 +169,7 @@ export type Database = {
         Update: {
           calories?: number
           created_at?: string
+          diet_id?: string | null
           food_id?: string | null
           id?: string
           log_date?: string
@@ -178,6 +181,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "log_entries_diet_id_user_id_fkey"
+            columns: ["diet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "diets"
+            referencedColumns: ["id", "user_id"]
+          },
           {
             foreignKeyName: "log_entries_food_id_user_id_fkey"
             columns: ["food_id", "user_id"]
