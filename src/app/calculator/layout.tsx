@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { PublicHeader } from "@/components/PublicHeader";
 import { buttonClasses } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,19 +13,13 @@ export default async function CalculatorLayout({ children }: LayoutProps<"/calcu
 
   return (
     <>
-      <header className="bg-surface">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2 md:px-6 md:py-3">
-          <Link
-            href="/"
-            className="rounded-lg text-lg font-semibold text-heading focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            Calorie Tracker
-          </Link>
+      <PublicHeader
+        action={
           <Link href="/login?next=/calculator" className={buttonClasses({ variant: "secondary", size: "sm" })}>
             Log in
           </Link>
-        </div>
-      </header>
+        }
+      />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">{children}</main>
     </>
   );
