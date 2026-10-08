@@ -3,18 +3,27 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { passwordError } from "@/lib/password";
 import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthState = { error?: string; message?: string };
 
-const CredentialsSchema = z.object({
+// Sign-in only needs a password: accounts made before the current rules must still get in.
+const SignInSchema = z.object({
   email: z.email("Enter a valid email address."),
-  password: z.string().min(6, "Password must be at least 6 characters."),
+  password: z.string().min(1, "Enter your password."),
 });
 
-function parseCredentials(formData: FormData) {
-  return CredentialsSchema.safeParse({
+const SignUpSchema = SignInSchema.extend({
+  password: z.string().superRefine((password, ctx) => {
+    const message = passwordError(password);
+    if (message) ctx.addIssue({ code: "custom", message });
+  }),
+});
+
+function parseCredentials(schema: typeof SignInSchema | typeof SignUpSchema, formData: FormData) {
+  return schema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
@@ -33,7 +42,7 @@ export async function signIn(
   _prevState: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const parsed = parseCredentials(formData);
+  const parsed = parseCredentials(SignInSchema, formData);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
@@ -47,7 +56,7 @@ export async function signUp(
   _prevState: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const parsed = parseCredentials(formData);
+  const parsed = parseCredentials(SignUpSchema, formData);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const next = safeNext(formData.get("next"));

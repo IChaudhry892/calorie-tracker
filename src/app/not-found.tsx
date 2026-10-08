@@ -13,14 +13,9 @@ export default function NotFound() {
         title="Page not found"
         text="That page doesn't exist. It may have moved, or the link is wrong."
         action={
-          <div className="flex flex-wrap justify-center gap-2">
-            <Link href="/log" className={buttonClasses()}>
-              Go to Daily Log
-            </Link>
-            <Link href="/" className={buttonClasses({ variant: "secondary" })}>
-              Home
-            </Link>
-          </div>
+          <Link href="/log" className={buttonClasses()}>
+            Go to Daily Log
+          </Link>
         }
       />
     </main>
