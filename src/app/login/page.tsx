@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PublicHeader } from "@/components/PublicHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { buttonClasses } from "@/components/ui/Button";
 import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
@@ -18,17 +20,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <>
-      {/* Same bar as the signed-out calculator: the brand links back to the landing page. */}
-      <header className="bg-surface">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2 md:px-6 md:py-3">
-          <Link href="/" className="rounded-lg text-lg font-semibold text-heading">
-            Calorie Tracker
-          </Link>
+      <PublicHeader
+        action={
           <Link href="/calculator" className={buttonClasses({ variant: "secondary", size: "sm" })}>
             Calculator
           </Link>
-        </div>
-      </header>
+        }
+      />
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-lg sm:p-8">
           <h1 className="text-center text-3xl font-semibold text-heading">Log in</h1>
@@ -41,6 +39,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           />
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }
