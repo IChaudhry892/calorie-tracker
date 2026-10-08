@@ -1,11 +1,18 @@
-import { FoodsPlaceholder } from "./FoodsPlaceholder";
+import { createClient } from "@/lib/supabase/server";
+import { FoodList } from "./FoodList";
 
-// Placeholder: the food list arrives in Phase 6.
-export default function FoodsPage() {
+export default async function FoodsPage() {
+  const supabase = await createClient();
+  // RLS limits this to the signed-in user's foods.
+  const { data: foods } = await supabase
+    .from("foods")
+    .select("id, name, serving_size, serving_unit, calories, protein_g, source")
+    .order("name");
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-semibold text-heading">Foods</h1>
-      <FoodsPlaceholder />
+      <FoodList foods={foods ?? []} />
     </div>
   );
 }
