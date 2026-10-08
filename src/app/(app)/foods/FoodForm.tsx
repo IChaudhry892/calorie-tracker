@@ -1,14 +1,17 @@
 "use client";
 
-import { startTransition, useActionState } from "react";
+import { startTransition, useActionState, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import type { Food } from "@/lib/db";
-import { SERVING_UNITS } from "@/lib/foods";
-import { saveFood, type FoodFormState } from "./actions";
+import { formatServing, SERVING_UNITS, type ServingUnit } from "@/lib/foods";
+import { estimateFood, saveFood, type FoodFormState } from "./actions";
 
-export type FoodFormFood = Pick<Food, "id" | "name" | "serving_size" | "serving_unit" | "calories" | "protein_g">;
+export type FoodFormFood = Pick<
+  Food,
+  "id" | "name" | "serving_size" | "serving_unit" | "calories" | "protein_g" | "source"
+>;
 
 const unitOptions = SERVING_UNITS.map((unit) => ({ value: unit, label: unit }));
 
@@ -21,8 +24,46 @@ export function FoodForm({ food, onDone }: { food?: FoodFormFood; onDone: () => 
   }, {});
   const errors = state.fieldErrors ?? {};
 
+  const formRef = useRef<HTMLFormElement>(null);
+  const [hasName, setHasName] = useState(Boolean(food?.name));
+  // Controlled so an AI estimate can fill them; the other fields stay uncontrolled.
+  const [calories, setCalories] = useState(food?.calories.toString() ?? "");
+  const [protein, setProtein] = useState(food?.protein_g.toString() ?? "");
+  // Stays "ai" once an estimate is applied, even if the numbers are then tweaked.
+  const [source, setSource] = useState(food?.source ?? "manual");
+  const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
+  const [estimating, startEstimate] = useTransition();
+
+  function estimate() {
+    const formData = new FormData(formRef.current!);
+    const input = {
+      name: String(formData.get("name") ?? ""),
+      serving_size: String(formData.get("serving_size") ?? ""),
+      serving_unit: String(formData.get("serving_unit") ?? ""),
+    };
+    startEstimate(async () => {
+      const result = await estimateFood(input);
+      if (!result.ok) {
+        setNote({ text: result.error, error: true });
+        return;
+      }
+      setCalories(String(Math.round(result.data.calories)));
+      setProtein(String(Number(result.data.protein_g.toFixed(1))));
+      setSource("ai");
+      const serving = formatServing({
+        serving_size: Number(input.serving_size),
+        serving_unit: input.serving_unit as ServingUnit,
+      });
+      setNote({ text: `AI estimate for ${serving}: ${result.data.assumption}. Check the values before saving.` });
+    });
+  }
+
+  // The note describes the name and serving it was made for, so editing them makes it stale.
+  const clearNote = () => setNote(null);
+
   return (
     <form
+      ref={formRef}
       // Not `action={action}`: React resets a form after its action runs, which
       // would wipe what the user typed whenever validation fails.
       onSubmit={(event) => {
@@ -34,6 +75,7 @@ export function FoodForm({ food, onDone }: { food?: FoodFormFood; onDone: () => 
       noValidate
     >
       {food && <input type="hidden" name="id" value={food.id} />}
+      <input type="hidden" name="source" value={source} />
       <Input
         label="Name"
         name="name"
@@ -43,6 +85,10 @@ export function FoodForm({ food, onDone }: { food?: FoodFormFood; onDone: () => 
         autoFocus
         required
         error={errors.name}
+        onChange={(e) => {
+          setHasName(e.target.value.trim() !== "");
+          clearNote();
+        }}
       />
       <div className="grid grid-cols-2 gap-3">
         <Input
@@ -55,6 +101,7 @@ export function FoodForm({ food, onDone }: { food?: FoodFormFood; onDone: () => 
           defaultValue={food?.serving_size ?? 100}
           required
           error={errors.serving_size}
+          onChange={clearNote}
         />
         <Select
           label="Unit"
@@ -62,6 +109,7 @@ export function FoodForm({ food, onDone }: { food?: FoodFormFood; onDone: () => 
           defaultValue={food?.serving_unit ?? "g"}
           options={unitOptions}
           error={errors.serving_unit}
+          onChange={clearNote}
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -72,7 +120,8 @@ export function FoodForm({ food, onDone }: { food?: FoodFormFood; onDone: () => 
           inputMode="decimal"
           min={0}
           step="any"
-          defaultValue={food?.calories}
+          value={calories}
+          onChange={(e) => setCalories(e.target.value)}
           required
           error={errors.calories}
         />
@@ -83,12 +132,20 @@ export function FoodForm({ food, onDone }: { food?: FoodFormFood; onDone: () => 
           inputMode="decimal"
           min={0}
           step="any"
-          defaultValue={food?.protein_g}
+          value={protein}
+          onChange={(e) => setProtein(e.target.value)}
           required
           error={errors.protein_g}
         />
       </div>
-      {/* Phase 7: the "Estimate with AI" button goes here. */}
+      <div className="flex flex-col items-start gap-2">
+        <Button variant="secondary" size="sm" onClick={estimate} disabled={!hasName || estimating}>
+          {estimating ? "Estimating…" : "Estimate with AI"}
+        </Button>
+        <p aria-live="polite" className={`text-sm ${note?.error ? "text-red-300" : "text-foreground/70"}`}>
+          {note?.text}
+        </p>
+      </div>
 
       <p aria-live="polite" role="status" className="min-h-5 text-sm text-red-300">
         {state.error}

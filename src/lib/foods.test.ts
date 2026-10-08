@@ -28,7 +28,13 @@ describe("FoodSchema", () => {
       serving_unit: "g",
       calories: 165,
       protein_g: 31,
+      source: "manual",
     });
+  });
+
+  it("keeps an AI source", () => {
+    expect(FoodSchema.parse({ ...valid, source: "ai" }).source).toBe("ai");
+    expect(errorFor({ source: "robot" })).toEqual(["source"]);
   });
 
   it("rejects an empty name", () => {
