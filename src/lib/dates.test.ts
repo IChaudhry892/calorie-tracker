@@ -23,25 +23,25 @@ describe("addDays", () => {
 });
 
 describe("weekDays", () => {
-  it("runs Monday to Sunday", () => {
+  it("runs Sunday to Saturday", () => {
     // 2026-10-08 is a Thursday.
     expect(weekDays("2026-10-08")).toEqual([
+      "2026-10-04",
       "2026-10-05",
       "2026-10-06",
       "2026-10-07",
       "2026-10-08",
       "2026-10-09",
       "2026-10-10",
-      "2026-10-11",
     ]);
   });
 
-  it("puts a Sunday at the end of its week", () => {
-    expect(weekDays("2026-10-11")[0]).toBe("2026-10-05");
+  it("puts a Saturday at the end of its week", () => {
+    expect(weekDays("2026-10-10")[0]).toBe("2026-10-04");
   });
 
-  it("starts on the day itself for a Monday", () => {
-    expect(weekDays("2026-10-05")[0]).toBe("2026-10-05");
+  it("starts on the day itself for a Sunday", () => {
+    expect(weekDays("2026-10-04")[0]).toBe("2026-10-04");
   });
 });
 
