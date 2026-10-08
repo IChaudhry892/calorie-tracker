@@ -5,7 +5,7 @@ import { z } from "zod";
 import { AI_NOT_SET_UP, aiConfigured, estimateMacros } from "@/lib/ai/estimate";
 import { ESTIMATE_FAILED, type EstimateResult } from "@/lib/ai/estimate-schema";
 import { FoodFields, FoodSchema, type FoodField } from "@/lib/foods";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/require-user";
 
 export type FoodFormState = {
   error?: string;
@@ -17,13 +17,6 @@ export type DeleteFoodResult = { error?: string };
 
 const IdSchema = z.uuid();
 const EstimateInputSchema = FoodFields.pick({ name: true, serving_size: true, serving_unit: true });
-
-/** The signed-in user's client, or null. RLS scopes every query to their rows. */
-async function requireUser() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  return data?.claims ? { supabase, userId: data.claims.sub } : null;
-}
 
 export async function saveFood(_prevState: FoodFormState, formData: FormData): Promise<FoodFormState> {
   const user = await requireUser();
