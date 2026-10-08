@@ -9,13 +9,14 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Calorie Tracker",
+  title: { default: "Calorie Tracker", template: "%s · Calorie Tracker" },
   description: "Track your calories and protein, plan diets, and calculate your caloric needs.",
 };
 
 // "cover" lets the mobile tab bar extend under the iPhone home indicator (padded via safe-area insets).
 export const viewport: Viewport = {
   viewportFit: "cover",
+  themeColor: "#2c2d32",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

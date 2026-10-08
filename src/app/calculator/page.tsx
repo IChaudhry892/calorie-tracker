@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { CalculatorForm } from "./CalculatorForm";
+
+export const metadata: Metadata = { title: "Calorie Calculator" };
 
 export default async function CalculatorPage() {
   const supabase = await createClient();

@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { DateSchema, weekDays } from "@/lib/dates";
 import { dietTotals, type DietItemWithFood } from "@/lib/diets";
 import { createClient } from "@/lib/supabase/server";
 import { DailyLog } from "./DailyLog";
 import { SetToday } from "./SetToday";
+
+export const metadata: Metadata = { title: "Daily Log" };
 
 const FOOD_COLUMNS = "id, name, serving_size, serving_unit, calories, protein_g";
 

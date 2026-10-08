@@ -344,6 +344,7 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
                   label={g.label}
                   rate={`−${unitSystem === "metric" ? g.rateKg : g.rateLb} ${rateUnit}/week`}
                   calories={g.calories}
+                  delta={g.delta}
                   warning={
                     g.calories < MIN_SAFE_CALORIES[sex]
                       ? `Below the safe minimum of ${MIN_SAFE_CALORIES[sex]} kcal/day.`
@@ -360,6 +361,7 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
                   label={g.label}
                   rate={`+${unitSystem === "metric" ? g.rateKg : g.rateLb} ${rateUnit}/week`}
                   calories={g.calories}
+                  delta={g.delta}
                 />
               ))}
             </GoalGroup>
@@ -421,13 +423,18 @@ function GoalGroup({ title, children }: { title: string; children: ReactNode }) 
   );
 }
 
-function GoalCard({ label, rate, calories, warning }: { label: string; rate: string; calories: number; warning?: string }) {
+type GoalCardProps = { label: string; rate: string; calories: number; delta: number; warning?: string };
+
+function GoalCard({ label, rate, calories, delta, warning }: GoalCardProps) {
   return (
     <Card as="li" className="flex flex-col gap-1">
       <span className="font-medium text-heading">{label}</span>
       <span className="text-sm text-foreground/70">{rate}</span>
       <span className="text-2xl font-semibold text-accent">
         {formatCalories(calories)} <span className="text-sm font-normal text-foreground/70">kcal/day</span>
+      </span>
+      <span className="text-sm text-foreground/70">
+        {formatCalories(Math.abs(delta))} kcal {delta < 0 ? "deficit" : "surplus"}
       </span>
       {warning && <span className="text-xs text-red-300">{warning}</span>}
     </Card>

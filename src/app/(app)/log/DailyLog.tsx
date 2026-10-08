@@ -139,7 +139,7 @@ export function DailyLog({ date, week, entries, foods, diets, maintenance }: Dai
                   aria-label={`${formatDay(day)}: ${formatCalories(kcal)} kcal`}
                   className={`flex flex-col items-center rounded-lg border-2 px-0.5 py-2 text-center transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-accent ${
                     selected ? "border-accent bg-surface" : "border-transparent bg-surface/60"
-                  } ${kcal === 0 && !selected ? "text-foreground/50" : ""}`}
+                  } ${kcal === 0 && !selected ? "text-foreground/60" : ""}`}
                 >
                   <span className="text-xs">{formatWeekday(day)}</span>
                   <span className="font-semibold">{dayOfMonth(day)}</span>
@@ -240,7 +240,9 @@ function Progress({ total, maintenance }: { total: number; maintenance: number |
   const rounded = Math.round(total);
   const over = rounded > maintenance;
   const percent = Math.min(rounded / maintenance, 1) * 100;
-  const remaining = Math.abs(maintenance - rounded);
+  const difference = Math.abs(maintenance - rounded);
+  const balance =
+    difference === 0 ? "At maintenance" : `${formatCalories(difference)} kcal ${over ? "surplus" : "deficit"}`;
 
   return (
     <div className="flex flex-col gap-1">
@@ -262,9 +264,7 @@ function Progress({ total, maintenance }: { total: number; maintenance: number |
       </div>
       <p aria-live="polite" className="text-sm tabular-nums">
         {formatCalories(total)} / {maintenance} kcal ·{" "}
-        <span className={over ? "text-red-300" : "text-foreground/70"}>
-          {formatCalories(remaining)} {over ? "over" : "left"}
-        </span>
+        <span className={`font-semibold ${over ? "text-red-300" : "text-accent"}`}>{balance}</span>
       </p>
     </div>
   );

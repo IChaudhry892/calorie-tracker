@@ -20,11 +20,10 @@ export function addDays(iso: string, days: number): string {
   return toIso(date);
 }
 
-/** Monday to Sunday of the week containing `iso`. */
+/** Sunday to Saturday of the week containing `iso`. */
 export function weekDays(iso: string): string[] {
-  const offset = (toDate(iso).getUTCDay() + 6) % 7; // Monday = 0
-  const monday = addDays(iso, -offset);
-  return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const sunday = addDays(iso, -toDate(iso).getUTCDay()); // Sunday = 0
+  return Array.from({ length: 7 }, (_, i) => addDays(sunday, i));
 }
 
 const dayFormat = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
