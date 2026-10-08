@@ -16,7 +16,7 @@ export function formatServing({ serving_size, serving_unit }: Pick<Food, "servin
 }
 
 /** Blank form fields become undefined, so they fail as "required" instead of coercing to 0. */
-const blankToUndefined = (value: unknown) => (typeof value === "string" && value.trim() === "" ? undefined : value);
+export const blankToUndefined = (value: unknown) => (typeof value === "string" && value.trim() === "" ? undefined : value);
 
 const number = (message: string) => z.coerce.number({ error: message });
 

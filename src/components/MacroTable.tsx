@@ -1,15 +1,9 @@
 import type { ReactNode } from "react";
 import { Card } from "@/components/ui/Card";
-import { formatCalories, formatProtein, formatQuantity, sumMacros } from "@/lib/macros";
+import { formatServing } from "@/lib/foods";
+import { formatCalories, formatProtein, sumMacros, type MacroRow } from "@/lib/macros";
 
-export type MacroRow = {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  calories: number;
-  protein_g: number;
-};
+export type { MacroRow };
 
 type MacroTableProps = {
   rows: MacroRow[];
@@ -48,7 +42,7 @@ export function MacroTable({ rows, caption = "Foods", renderActions, emptyState 
               <tr key={row.id} className="border-b border-foreground/10 last:border-b-0">
                 <td className="px-4 py-3">{row.name}</td>
                 <td className={numCell}>
-                  {formatQuantity(row.quantity)} {row.unit}
+                  {formatServing({ serving_size: row.quantity, serving_unit: row.unit })}
                 </td>
                 <td className={numCell}>{formatCalories(row.calories)} kcal</td>
                 <td className={numCell}>{formatProtein(row.protein_g)} g</td>
@@ -76,7 +70,7 @@ export function MacroTable({ rows, caption = "Foods", renderActions, emptyState 
                 <p className="truncate font-medium text-heading">
                   {row.name}{" "}
                   <span className="font-normal text-foreground/70">
-                    · {formatQuantity(row.quantity)} {row.unit}
+                    · {formatServing({ serving_size: row.quantity, serving_unit: row.unit })}
                   </span>
                 </p>
                 <p className="text-sm tabular-nums">
