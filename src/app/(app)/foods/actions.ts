@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { FoodSchema, type FoodField } from "@/lib/foods";
+import { AI_NOT_SET_UP, aiConfigured, estimateMacros } from "@/lib/ai/estimate";
+import { ESTIMATE_FAILED, type EstimateResult } from "@/lib/ai/estimate-schema";
+import { FoodFields, FoodSchema, type FoodField } from "@/lib/foods";
 import { createClient } from "@/lib/supabase/server";
 
 export type FoodFormState = {
@@ -14,6 +16,7 @@ export type FoodFormState = {
 export type DeleteFoodResult = { error?: string };
 
 const IdSchema = z.uuid();
+const EstimateInputSchema = FoodFields.pick({ name: true, serving_size: true, serving_unit: true });
 
 /** The signed-in user's client, or null. RLS scopes every query to their rows. */
 async function requireUser() {
@@ -68,4 +71,21 @@ export async function deleteFood(id: string): Promise<DeleteFoodResult> {
 
   revalidatePath("/foods");
   return {};
+}
+
+/** Estimates calories/protein for a food and serving. Writes nothing except the daily usage count. */
+export async function estimateFood(input: { name: string; serving_size: string; serving_unit: string }): Promise<EstimateResult> {
+  const parsed = EstimateInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Enter a name and serving size first." };
+
+  const user = await requireUser();
+  if (!user) return { ok: false, error: "Log in again." };
+  // Before the quota check, so a missing key doesn't use up the day's estimates.
+  if (!aiConfigured()) return { ok: false, error: AI_NOT_SET_UP };
+
+  const { data: allowed, error } = await user.supabase.rpc("consume_ai_quota");
+  if (error) return { ok: false, error: ESTIMATE_FAILED };
+  if (!allowed) return { ok: false, error: "You've used today's 50 AI estimates. Enter the values yourself." };
+
+  return estimateMacros(parsed.data);
 }

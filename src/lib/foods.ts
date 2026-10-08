@@ -20,26 +20,33 @@ const blankToUndefined = (value: unknown) => (typeof value === "string" && value
 
 const number = (message: string) => z.coerce.number({ error: message });
 
-export const FoodSchema = z
-  .object({
-    name: z.string().trim().min(1, "Enter a name.").max(80, "Use 80 characters or fewer."),
-    serving_size: z.preprocess(
-      blankToUndefined,
-      number("Enter a serving size.").positive("Must be more than 0.").max(10000, "Must be 10,000 or less."),
-    ),
-    serving_unit: z.enum(SERVING_UNITS, { error: "Pick a unit." }),
-    calories: z.preprocess(
-      blankToUndefined,
-      number("Enter the calories.").min(0, "Can't be negative.").max(10000, "Must be 10,000 or less."),
-    ),
-    protein_g: z.preprocess(
-      blankToUndefined,
-      number("Enter the protein.").min(0, "Can't be negative.").max(1000, "Must be 1,000 or less."),
-    ),
-  })
-  // Protein is 4 kcal/g; the +5 slack absorbs label rounding. Only checked once
-  // every field is valid, so a negative calorie count doesn't also flag protein.
-  .refine((food) => food.protein_g * 4 <= food.calories + 5, {
+/** The plain fields. Kept separate because zod can't `.pick()` from a refined object. */
+export const FoodFields = z.object({
+  name: z.string().trim().min(1, "Enter a name.").max(80, "Use 80 characters or fewer."),
+  serving_size: z.preprocess(
+    blankToUndefined,
+    number("Enter a serving size.").positive("Must be more than 0.").max(10000, "Must be 10,000 or less."),
+  ),
+  serving_unit: z.enum(SERVING_UNITS, { error: "Pick a unit." }),
+  calories: z.preprocess(
+    blankToUndefined,
+    number("Enter the calories.").min(0, "Can't be negative.").max(10000, "Must be 10,000 or less."),
+  ),
+  protein_g: z.preprocess(
+    blankToUndefined,
+    number("Enter the protein.").min(0, "Can't be negative.").max(1000, "Must be 1,000 or less."),
+  ),
+  source: z.enum(["manual", "ai"]).default("manual"),
+});
+
+/** True when the protein (4 kcal/g) fits inside the calories; the +5 slack absorbs label rounding. */
+export function proteinFitsCalories({ calories, protein_g }: { calories: number; protein_g: number }) {
+  return protein_g * 4 <= calories + 5;
+}
+
+export const FoodSchema = FoodFields
+  // Only checked once every field is valid, so a negative calorie count doesn't also flag protein.
+  .refine(proteinFitsCalories, {
     message: "Protein can't supply more calories than the total.",
     path: ["protein_g"],
     when: (payload) => payload.issues.length === 0,
