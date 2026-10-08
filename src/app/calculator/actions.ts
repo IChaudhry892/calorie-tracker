@@ -13,7 +13,7 @@ const ProfileSchema = z.object({
   sex: z.enum(SEXES),
   age: z.coerce.number().int().min(13).max(120),
   height_cm: z.coerce.number().min(50).max(275),
-  weight_kg: z.coerce.number().min(20).max(500),
+  weight_kg: z.coerce.number().min(20).max(550),
   activity_level: z.enum(ACTIVITY_LEVELS),
 });
 

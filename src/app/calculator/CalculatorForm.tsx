@@ -36,8 +36,8 @@ const activityOptions = ACTIVITY_LEVELS.map((level) => ({
 }));
 
 // Same ranges as the save action and the DB check constraints.
-const LIMITS = { age: [13, 120], heightCm: [50, 275], weightKg: [20, 500] } as const;
-// Whole imperial bounds that fall inside the metric ones: 1′8″–9′0″ and 45–1102 lb.
+const LIMITS = { age: [13, 120], heightCm: [50, 275], weightKg: [20, 550] } as const;
+// Whole imperial bounds that fall inside the metric ones: 1′8″–9′0″ and 45–1212 lb.
 const HEIGHT_IN = [Math.ceil(LIMITS.heightCm[0] / CM_PER_IN), Math.floor(LIMITS.heightCm[1] / CM_PER_IN)] as const;
 const WEIGHT_LB = [Math.ceil(kgToLb(LIMITS.weightKg[0])), Math.floor(kgToLb(LIMITS.weightKg[1]))] as const;
 
