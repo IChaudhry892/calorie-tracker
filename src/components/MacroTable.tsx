@@ -40,7 +40,10 @@ export function MacroTable({ rows, caption = "Foods", renderActions, emptyState 
           <tbody>
             {rows.map((row) => (
               <tr key={row.id} className="border-b border-foreground/10 last:border-b-0">
-                <td className="px-4 py-3">{row.name}</td>
+                <td className="px-4 py-3">
+                  {row.name}
+                  {row.tag && <RowTag text={row.tag} />}
+                </td>
                 <td className={numCell}>
                   {formatServing({ serving_size: row.quantity, serving_unit: row.unit })}
                 </td>
@@ -76,6 +79,7 @@ export function MacroTable({ rows, caption = "Foods", renderActions, emptyState 
                 <p className="text-sm tabular-nums">
                   {formatCalories(row.calories)} kcal · {formatProtein(row.protein_g)} g protein
                 </p>
+                {row.tag && <RowTag text={row.tag} className="mt-1 ml-0" />}
               </div>
               {renderActions && <div className="shrink-0">{renderActions(row)}</div>}
             </Card>
@@ -86,5 +90,15 @@ export function MacroTable({ rows, caption = "Foods", renderActions, emptyState 
         </div>
       </div>
     </>
+  );
+}
+
+function RowTag({ text, className = "ml-2" }: { text: string; className?: string }) {
+  return (
+    <span
+      className={`inline-block max-w-full truncate rounded bg-accent/15 px-1.5 py-0.5 align-middle text-xs font-medium text-accent ${className}`}
+    >
+      {text}
+    </span>
   );
 }

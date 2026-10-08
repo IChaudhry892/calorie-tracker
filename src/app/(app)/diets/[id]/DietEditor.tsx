@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useOptimistic, useState, useTransition } from "react";
+import { FoodPicker } from "@/components/FoodPicker";
+import { QuantityForm } from "@/components/QuantityForm";
 import { MacroTable } from "@/components/MacroTable";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
-import { dietRows, DietNameSchema, QuantitySchema, type DietFood, type DietItemWithFood } from "@/lib/diets";
-import { formatServing } from "@/lib/foods";
-import { formatCalories, formatQuantity, sumMacros } from "@/lib/macros";
+import { dietRows, DietNameSchema, type DietFood, type DietItemWithFood } from "@/lib/diets";
+import { formatCalories, sumMacros } from "@/lib/macros";
 import {
   addDietItem,
   deleteDiet,
@@ -18,6 +20,7 @@ import {
   renameDiet,
   updateDietItemQuantity,
 } from "../actions";
+import { ApplyDietForm } from "../../log/ApplyDietForm";
 
 type DietEditorProps = {
   diet: { id: string; name: string; items: DietItemWithFood[] };
@@ -42,6 +45,8 @@ export function DietEditor({ diet, foods, maintenance }: DietEditorProps) {
   const [adding, setAdding] = useState(false);
   const [addCount, setAddCount] = useState(0);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const router = useRouter();
   const [headerError, setHeaderError] = useState<string>();
   const [headerPending, startHeaderAction] = useTransition();
 
@@ -80,6 +85,9 @@ export function DietEditor({ diet, foods, maintenance }: DietEditorProps) {
         <DietName dietId={diet.id} name={diet.name} />
         <div className="flex flex-wrap gap-2">
           <Button onClick={openAdd}>Add food</Button>
+          <Button variant="secondary" onClick={() => setApplying(true)} disabled={items.length === 0}>
+            Apply to a day
+          </Button>
           <Button
             variant="secondary"
             onClick={() => runHeaderAction(() => duplicateDiet(diet.id))}
@@ -151,7 +159,28 @@ export function DietEditor({ diet, foods, maintenance }: DietEditorProps) {
       </Dialog>
 
       <Dialog open={adding} onClose={() => setAdding(false)} title="Add food">
-        {adding && <AddFoodForm key={addCount} dietId={diet.id} foods={foods} onDone={() => setAdding(false)} />}
+        {adding && (
+          <FoodPicker
+            key={addCount}
+            foods={foods}
+            submitLabel="Add to diet"
+            pendingLabel="Adding…"
+            onSubmit={(food, quantity) => addDietItem(diet.id, food.id, String(quantity))}
+            onDone={() => setAdding(false)}
+          />
+        )}
+      </Dialog>
+
+      <Dialog open={applying} onClose={() => setApplying(false)} title={`Apply ${diet.name} to a day`}>
+        {applying && (
+          <ApplyDietForm
+            diets={[{ id: diet.id, name: diet.name, calories: total.calories, itemCount: items.length }]}
+            onApplied={(date) => {
+              setApplying(false);
+              router.push(`/log?date=${date}`);
+            }}
+          />
+        )}
       </Dialog>
 
       <Dialog open={confirmingDelete} onClose={() => setConfirmingDelete(false)} title={`Delete ${diet.name}?`}>
@@ -237,149 +266,6 @@ function DietName({ dietId, name }: { dietId: string; name: string }) {
           Cancel
         </Button>
       </div>
-    </form>
-  );
-}
-
-function QuantityForm({
-  unit,
-  initial,
-  submitLabel = "Save",
-  onSubmit,
-}: {
-  unit: string;
-  initial?: number;
-  submitLabel?: string;
-  onSubmit: (quantity: number) => void;
-}) {
-  const [value, setValue] = useState(initial != null ? formatQuantity(initial) : "");
-  const [error, setError] = useState<string>();
-
-  return (
-    <form
-      className="flex flex-col gap-4"
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        const parsed = QuantitySchema.safeParse(value);
-        if (!parsed.success) return setError(parsed.error.issues[0].message);
-        onSubmit(parsed.data);
-      }}
-    >
-      <Input
-        label={`Quantity (${unit})`}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="any"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        autoFocus
-        error={error}
-      />
-      <Button type="submit" className="w-full sm:w-auto sm:self-end">
-        {submitLabel}
-      </Button>
-    </form>
-  );
-}
-
-function AddFoodForm({ dietId, foods, onDone }: { dietId: string; foods: DietFood[]; onDone: () => void }) {
-  const [query, setQuery] = useState("");
-  const [foodId, setFoodId] = useState<string>();
-  const [quantity, setQuantity] = useState("");
-  const [error, setError] = useState<string>();
-  const [pending, startTransition] = useTransition();
-
-  if (foods.length === 0) {
-    return (
-      <EmptyState
-        title="Add foods first"
-        text="Diets are built from your food list."
-        action={
-          <Link href="/foods" className="font-medium text-accent hover:text-accent-hover">
-            Go to Foods
-          </Link>
-        }
-      />
-    );
-  }
-
-  const needle = query.trim().toLowerCase();
-  const visible = needle ? foods.filter((food) => food.name.toLowerCase().includes(needle)) : foods;
-  const selected = foods.find((food) => food.id === foodId);
-
-  return (
-    <form
-      className="flex flex-col gap-4"
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!selected) return setError("Pick a food.");
-        const parsed = QuantitySchema.safeParse(quantity);
-        if (!parsed.success) return setError(parsed.error.issues[0].message);
-        setError(undefined);
-        startTransition(async () => {
-          const result = await addDietItem(dietId, selected.id, String(parsed.data));
-          if (result.error) setError(result.error);
-          else onDone();
-        });
-      }}
-    >
-      <Input
-        label="Search foods"
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        autoComplete="off"
-        autoFocus
-      />
-      <fieldset className="flex flex-col gap-1">
-        <legend className="sr-only">Food</legend>
-        <div className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-lg border border-accent/20 p-1">
-          {visible.length === 0 && <p className="px-3 py-2 text-sm text-foreground/70">No foods match.</p>}
-          {visible.map((food) => (
-            <label
-              key={food.id}
-              className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 has-checked:bg-accent/15 has-checked:text-accent has-focus-visible:ring-1 has-focus-visible:ring-inset has-focus-visible:ring-accent"
-            >
-              <input
-                type="radio"
-                name="food"
-                value={food.id}
-                checked={food.id === foodId}
-                onChange={() => {
-                  setFoodId(food.id);
-                  setQuantity(formatQuantity(food.serving_size));
-                  setError(undefined);
-                }}
-                className="sr-only"
-              />
-              <span className="min-w-0 break-words">{food.name}</span>
-              <span className="shrink-0 text-xs text-foreground/60">
-                {formatCalories(food.calories)} kcal / {formatServing(food)}
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <Input
-        label={selected ? `Quantity (${selected.serving_unit})` : "Quantity"}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="any"
-        value={quantity}
-        onChange={(e) => setQuantity(e.target.value)}
-        disabled={!selected}
-        hint={selected ? undefined : "Pick a food first."}
-      />
-      <p role="status" aria-live="polite" className="min-h-5 text-sm text-red-300">
-        {error}
-      </p>
-      <Button type="submit" disabled={pending} className="w-full sm:w-auto sm:self-end">
-        {pending ? "Adding…" : "Add to diet"}
-      </Button>
     </form>
   );
 }
