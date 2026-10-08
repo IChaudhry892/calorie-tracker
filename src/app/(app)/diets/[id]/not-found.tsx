@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 export default function DietNotFound() {
   return (
     <EmptyState
+      headingLevel="h1"
       title="Diet not found"
       text="It may have been deleted, or the link is wrong."
       action={

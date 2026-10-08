@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import type { DietItemWithFood } from "@/lib/diets";
@@ -5,6 +6,14 @@ import { createClient } from "@/lib/supabase/server";
 import { DietEditor } from "./DietEditor";
 
 const FOOD_COLUMNS = "id, name, serving_size, serving_unit, calories, protein_g";
+
+export async function generateMetadata({ params }: PageProps<"/diets/[id]">): Promise<Metadata> {
+  const { id } = await params;
+  if (!z.uuid().safeParse(id).success) return { title: "Diet not found" };
+  const supabase = await createClient();
+  const { data } = await supabase.from("diets").select("name").eq("id", id).maybeSingle();
+  return { title: data?.name ?? "Diet not found" };
+}
 
 export default async function DietPage({ params }: PageProps<"/diets/[id]">) {
   const { id } = await params;

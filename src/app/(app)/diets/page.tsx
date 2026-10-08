@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { dietTotals, type DietItemWithFood } from "@/lib/diets";
 import { formatCalories, formatProtein } from "@/lib/macros";
 import { createClient } from "@/lib/supabase/server";
 import { NewDietButton } from "./NewDietButton";
+
+export const metadata: Metadata = { title: "Diets" };
 
 export default async function DietsPage() {
   const supabase = await createClient();

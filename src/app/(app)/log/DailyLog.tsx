@@ -139,7 +139,7 @@ export function DailyLog({ date, week, entries, foods, diets, maintenance }: Dai
                   aria-label={`${formatDay(day)}: ${formatCalories(kcal)} kcal`}
                   className={`flex flex-col items-center rounded-lg border-2 px-0.5 py-2 text-center transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-accent ${
                     selected ? "border-accent bg-surface" : "border-transparent bg-surface/60"
-                  } ${kcal === 0 && !selected ? "text-foreground/50" : ""}`}
+                  } ${kcal === 0 && !selected ? "text-foreground/60" : ""}`}
                 >
                   <span className="text-xs">{formatWeekday(day)}</span>
                   <span className="font-semibold">{dayOfMonth(day)}</span>

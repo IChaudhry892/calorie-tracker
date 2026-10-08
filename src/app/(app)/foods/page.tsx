@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { FoodList } from "./FoodList";
+
+export const metadata: Metadata = { title: "Foods" };
 
 export default async function FoodsPage() {
   const supabase = await createClient();

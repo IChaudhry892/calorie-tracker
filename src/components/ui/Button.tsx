@@ -7,7 +7,8 @@ const base =
   "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-accent-secondary text-heading hover:opacity-90",
+  // Dark text: white on accent-secondary is only 2.9:1, the background colour is 4.7:1 (WCAG AA).
+  primary: "bg-accent-secondary text-background hover:bg-accent",
   secondary: "border-2 border-accent text-accent hover:text-accent-hover",
   ghost: "text-foreground/80 hover:text-accent-hover",
   danger: "border-2 border-red-300/60 text-red-300 hover:border-red-300",
