@@ -2,6 +2,8 @@
 
 A mobile-friendly web app for tracking calories and protein. Work out your maintenance calories, keep a list of the foods you eat, build reusable diets, and log each day against your target.
 
+**Live site: <https://calorie-tracker-chi-murex.vercel.app>**
+
 ## Features
 
 - **Calorie calculator**: Mifflin–St Jeor BMR × activity level, with targets (and the daily surplus/deficit) for losing or gaining weight. Works in imperial or metric, and works without an account. Signed-in users can save their result as their maintenance calories.
@@ -9,6 +11,7 @@ A mobile-friendly web app for tracking calories and protein. Work out your maint
 - **Diets**: named lists of foods and quantities with live totals. Duplicate them, or apply one to any day in one go.
 - **Daily log**: one page per day (`/log?date=YYYY-MM-DD`) with a Sunday–Saturday week strip, entries from your foods or entered by hand, and a progress bar showing your surplus or deficit against maintenance.
 - Email/password and Google sign-in. Every table uses Row Level Security, so users only ever see their own rows.
+- [Privacy Policy](https://calorie-tracker-chi-murex.vercel.app/privacy) and [Terms of Service](https://calorie-tracker-chi-murex.vercel.app/terms) pages (needed to publish the Google sign-in app).
 
 ## Stack
 
@@ -69,4 +72,6 @@ Add `http://<your-PC-IP>:3000/**` to the Supabase Redirect URLs as well if you w
 1. Push to GitHub and import the repository in Vercel (the framework is detected automatically).
 2. Add the environment variables for Production and Preview: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `GEMINI_API_KEY`.
 3. Deploy.
-4. In Supabase → Authentication → URL Configuration, set **Site URL** to `https://<app>.vercel.app` and add `https://<app>.vercel.app/**` to **Redirect URLs**. Google's OAuth redirect stays the Supabase callback, so nothing changes there.
+4. Use the **production domain** from Vercel → Settings → Domains (e.g. `https://<app>.vercel.app`), not a per-deployment URL. Per-deployment URLs sit behind Vercel's login (Deployment Protection), so other people can't open them.
+5. In Supabase → Authentication → URL Configuration, set **Site URL** to the production domain and add `https://<app>.vercel.app/**` to **Redirect URLs**. Google's OAuth redirect stays the Supabase callback, so nothing changes there.
+6. To let anyone sign in with Google, fill in Google Auth Platform → **Branding**: home page `/`, privacy policy `/privacy`, terms `/terms`, the production domain under authorized domains, and no logo (a logo triggers brand verification). Then go to **Audience → Publish app**.
