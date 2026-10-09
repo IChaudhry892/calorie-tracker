@@ -13,7 +13,7 @@ export default async function CalculatorPage() {
     ? (
         await supabase
           .from("profiles")
-          .select("unit_system, sex, age, height_cm, weight_kg, activity_level, maintenance_calories")
+          .select("unit_system, sex, age, height_cm, weight_kg, activity_level, maintenance_calories, goal")
           .eq("id", claims.sub)
           .maybeSingle()
       ).data

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { AmountFields, oneServing, type Amount } from "@/components/AmountFields";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { QuantitySchema, type DietFood } from "@/lib/diets";
 import { formatServing } from "@/lib/foods";
-import { formatCalories, formatQuantity } from "@/lib/macros";
+import { formatCalories } from "@/lib/macros";
 
 type FoodPickerProps = {
   foods: DietFood[];
@@ -18,19 +19,19 @@ type FoodPickerProps = {
   onDone: () => void;
 };
 
-/** Search + radio list of the user's foods, with a quantity in the picked food's unit. */
+/** Search + radio list of the user's foods, with servings or a quantity in the picked food's unit. */
 export function FoodPicker({ foods, submitLabel, pendingLabel, onSubmit, onDone }: FoodPickerProps) {
   const [query, setQuery] = useState("");
   const [foodId, setFoodId] = useState<string>();
-  const [quantity, setQuantity] = useState("");
+  const [amount, setAmount] = useState<Amount>({ quantity: "", servings: "" });
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
 
   if (foods.length === 0) {
     return (
       <EmptyState
-        title="Add foods first"
-        text="Diets are built from your food list."
+        title="Your food list is empty"
+        text="Add foods on the Foods page, or use the Manual tab."
         action={
           <Link href="/foods" className="font-medium text-accent hover:text-accent-hover">
             Go to Foods
@@ -51,7 +52,7 @@ export function FoodPicker({ foods, submitLabel, pendingLabel, onSubmit, onDone 
       onSubmit={(event) => {
         event.preventDefault();
         if (!selected) return setError("Pick a food.");
-        const parsed = QuantitySchema.safeParse(quantity);
+        const parsed = QuantitySchema.safeParse(amount.quantity);
         if (!parsed.success) return setError(parsed.error.issues[0].message);
         setError(undefined);
         startTransition(async () => {
@@ -85,7 +86,7 @@ export function FoodPicker({ foods, submitLabel, pendingLabel, onSubmit, onDone 
                 checked={food.id === foodId}
                 onChange={() => {
                   setFoodId(food.id);
-                  setQuantity(formatQuantity(food.serving_size));
+                  setAmount(oneServing(food.serving_size));
                   setError(undefined);
                 }}
                 className="sr-only"
@@ -98,17 +99,16 @@ export function FoodPicker({ foods, submitLabel, pendingLabel, onSubmit, onDone 
           ))}
         </div>
       </fieldset>
-      <Input
-        label={selected ? `Quantity (${selected.serving_unit})` : "Quantity"}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="any"
-        value={quantity}
-        onChange={(e) => setQuantity(e.target.value)}
-        disabled={!selected}
-        hint={selected ? undefined : "Pick a food first."}
-      />
+      {selected ? (
+        <AmountFields
+          unit={selected.serving_unit}
+          servingSize={selected.serving_size}
+          value={amount}
+          onChange={setAmount}
+        />
+      ) : (
+        <Input label="Quantity" type="number" value="" disabled hint="Pick a food first." readOnly />
+      )}
       <p role="status" aria-live="polite" className="min-h-5 text-sm text-red-300">
         {error}
       </p>

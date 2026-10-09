@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOptimistic, useState, useSyncExternalStore, useTransition } from "react";
+import { AddFoodForm } from "@/components/AddFoodForm";
 import { MacroTable } from "@/components/MacroTable";
 import { QuantityForm } from "@/components/QuantityForm";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { fieldClasses } from "@/components/ui/Input";
+import { describeBalance, type DailyTarget } from "@/lib/calories";
 import { addDays, dayOfMonth, formatDay, formatLongDate, formatWeekday, todayIso } from "@/lib/dates";
 import type { DietFood } from "@/lib/diets";
 import { dailyTotals, rescaleEntry, weekSummary, type LogRow } from "@/lib/log";
 import { formatCalories, sumMacros, type MacroRow } from "@/lib/macros";
-import { deleteLogEntry, updateLogEntryQuantity } from "./actions";
-import { AddEntryForm } from "./AddEntryForm";
+import { addLogEntry, deleteLogEntry, updateLogEntryQuantity } from "./actions";
 import { ApplyDietForm, type DietOption } from "./ApplyDietForm";
 
 type DailyLogProps = {
@@ -24,7 +25,8 @@ type DailyLogProps = {
   entries: LogRow[];
   foods: DietFood[];
   diets: DietOption[];
-  maintenance: number | null;
+  /** Maintenance + the calculator goal, or null before the calculator is saved. */
+  target: DailyTarget | null;
 };
 
 type OptimisticChange = { type: "quantity"; id: string; quantity: number } | { type: "remove"; id: string };
@@ -40,7 +42,7 @@ function applyChange(entries: LogRow[], change: OptimisticChange): LogRow[] {
 const subscribeNever = () => () => {};
 const useToday = () => useSyncExternalStore(subscribeNever, () => todayIso(), () => null);
 
-export function DailyLog({ date, week, entries, foods, diets, maintenance }: DailyLogProps) {
+export function DailyLog({ date, week, entries, foods, diets, target }: DailyLogProps) {
   const router = useRouter();
   const today = useToday();
 
@@ -99,7 +101,7 @@ export function DailyLog({ date, week, entries, foods, diets, maintenance }: Dai
           <Link
             href={`/log?date=${addDays(date, -1)}`}
             aria-label="Previous day"
-            className="rounded-lg border border-accent/40 px-3 py-2 hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-accent"
+            className="rounded-lg border-2 border-accent/40 px-3 py-2 hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-accent"
           >
             ◀
           </Link>
@@ -114,7 +116,7 @@ export function DailyLog({ date, week, entries, foods, diets, maintenance }: Dai
           <Link
             href={`/log?date=${addDays(date, 1)}`}
             aria-label="Next day"
-            className="rounded-lg border border-accent/40 px-3 py-2 hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-accent"
+            className="rounded-lg border-2 border-accent/40 px-3 py-2 hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-accent"
           >
             ▶
           </Link>
@@ -194,7 +196,7 @@ export function DailyLog({ date, week, entries, foods, diets, maintenance }: Dai
             );
           }}
         />
-        <Progress total={total.calories} maintenance={maintenance} />
+        <Progress total={total.calories} target={target} />
       </div>
 
       <Dialog open={editing !== null} onClose={() => setEditing(null)} title={`Edit ${editing?.name ?? "entry"}`}>
@@ -202,6 +204,8 @@ export function DailyLog({ date, week, entries, foods, diets, maintenance }: Dai
           <QuantityForm
             key={editing.id}
             unit={editing.unit}
+            // Servings come from the food it was logged from, if that food still has the same unit.
+            servingSize={editing.foods?.serving_unit === editing.unit ? editing.foods.serving_size : undefined}
             initial={editing.quantity}
             onSubmit={(quantity) => {
               setEditing(null);
@@ -214,7 +218,16 @@ export function DailyLog({ date, week, entries, foods, diets, maintenance }: Dai
       </Dialog>
 
       <Dialog open={dialog === "add"} onClose={() => setDialog(null)} title={`Add to ${formatDay(date)}`}>
-        {dialog === "add" && <AddEntryForm key={dialogCount} date={date} foods={foods} onDone={() => setDialog(null)} />}
+        {dialog === "add" && (
+          <AddFoodForm
+            key={dialogCount}
+            foods={foods}
+            submitLabel="Add to day"
+            onAddFood={(food, quantity) => addLogEntry({ kind: "food", date, foodId: food.id, quantity })}
+            onAddManual={(input) => addLogEntry({ kind: "custom", date, ...input })}
+            onDone={() => setDialog(null)}
+          />
+        )}
       </Dialog>
 
       <Dialog open={dialog === "apply"} onClose={() => setDialog(null)} title={`Apply a diet to ${formatDay(date)}`}>
@@ -226,31 +239,36 @@ export function DailyLog({ date, week, entries, foods, diets, maintenance }: Dai
   );
 }
 
-function Progress({ total, maintenance }: { total: number; maintenance: number | null }) {
-  if (maintenance == null) {
+function Progress({ total, target }: { total: number; target: DailyTarget | null }) {
+  if (target == null) {
     return (
       <p className="text-sm text-foreground/70">
         <Link href="/calculator" className="text-accent hover:text-accent-hover">
-          Set your maintenance calories
+          Set your calorie goal
         </Link>{" "}
-        to track the day against them.
+        to track the day against it.
       </p>
     );
   }
   const rounded = Math.round(total);
-  const over = rounded > maintenance;
-  const percent = Math.min(rounded / maintenance, 1) * 100;
-  const difference = Math.abs(maintenance - rounded);
-  const balance =
-    difference === 0 ? "At maintenance" : `${formatCalories(difference)} kcal ${over ? "surplus" : "deficit"}`;
+  const goal = Math.round(target.calories);
+  const over = rounded > goal;
+  const percent = goal > 0 ? Math.min(rounded / goal, 1) * 100 : 100;
+  const remaining = Math.abs(goal - rounded);
+  const status = remaining === 0 ? "Goal reached" : `${formatCalories(remaining)} kcal ${over ? "over" : "left"}`;
+  const { delta, label } = target.goal;
+  // On the same line as the bar's numbers, so it's clear the bar measures this goal.
+  const goalName = delta === 0 ? label : `${label}, ${Math.abs(delta)} kcal ${delta > 0 ? "surplus" : "deficit"}`;
+  // Against maintenance, whatever the goal: the day's actual deficit or surplus so far.
+  const balance = describeBalance(rounded - target.maintenance);
 
   return (
     <div className="flex flex-col gap-1">
       <div
         role="progressbar"
-        aria-label="Calories vs maintenance"
+        aria-label="Calories vs goal"
         aria-valuemin={0}
-        aria-valuemax={maintenance}
+        aria-valuemax={goal}
         aria-valuenow={rounded}
         className="h-3 overflow-hidden rounded-full bg-surface"
       >
@@ -262,10 +280,17 @@ function Progress({ total, maintenance }: { total: number; maintenance: number |
           style={{ width: `${percent}%` }}
         />
       </div>
-      <p aria-live="polite" className="text-sm tabular-nums">
-        {formatCalories(total)} / {maintenance} kcal ·{" "}
-        <span className={`font-semibold ${over ? "text-red-300" : "text-accent"}`}>{balance}</span>
-      </p>
+      <div aria-live="polite" className="flex flex-col gap-0.5 text-sm tabular-nums">
+        <p>
+          {formatCalories(total)} / {goal} kcal <span className="text-foreground/70">({goalName})</span> ·{" "}
+          <span className={`font-semibold ${over ? "text-red-300" : "text-accent"}`}>{status}</span>
+        </p>
+        <p className="text-foreground/70">
+          {balance
+            ? `Currently at ${balance} vs ${target.maintenance} kcal maintenance`
+            : `Currently at your ${target.maintenance} kcal maintenance`}
+        </p>
+      </div>
     </div>
   );
 }

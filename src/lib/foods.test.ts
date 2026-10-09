@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FoodSchema, formatServing } from "./foods";
+import { FoodSchema, formatServing, sourceFor } from "./foods";
 
 describe("formatServing", () => {
   it("formats weight units without a plural", () => {
@@ -60,5 +60,28 @@ describe("FoodSchema", () => {
   it("rejects more protein than the calories allow", () => {
     expect(errorFor({ calories: "50", protein_g: "100" })).toEqual(["protein_g"]);
     expect(errorFor({ calories: "100", protein_g: "26" })).toBeNull(); // 104 kcal is within the 5 kcal slack
+  });
+});
+
+describe("sourceFor", () => {
+  const ai = { calories: 105, protein_g: 1.3 };
+
+  it("is manual without an estimate", () => {
+    expect(sourceFor(null, "105", "1.3")).toBe("manual");
+  });
+
+  it("stays ai while either value is the estimate", () => {
+    expect(sourceFor(ai, "105", "1.3")).toBe("ai");
+    expect(sourceFor(ai, "110", "1.3")).toBe("ai");
+    expect(sourceFor(ai, "105.0", "2")).toBe("ai");
+  });
+
+  it("becomes manual once both values are replaced", () => {
+    expect(sourceFor(ai, "110", "2")).toBe("manual");
+  });
+
+  it("doesn't count cleared fields as the estimate", () => {
+    expect(sourceFor(ai, "", "")).toBe("manual");
+    expect(sourceFor({ calories: 0, protein_g: 0 }, " ", "")).toBe("manual");
   });
 });

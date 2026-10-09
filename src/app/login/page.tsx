@@ -11,7 +11,7 @@ import { LoginForm } from "./LoginForm";
 export const metadata: Metadata = { title: "Log in" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { next: rawNext, error } = await searchParams;
+  const { next: rawNext, error, deleted } = await searchParams;
   const next = safeNext(rawNext);
 
   const supabase = await createClient();
@@ -31,6 +31,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-lg sm:p-8">
           <h1 className="text-center text-3xl font-semibold text-heading">Log in</h1>
           <div className="mx-auto mt-3 mb-6 h-1 w-20 rounded-sm bg-linear-to-r from-accent to-accent-secondary" />
+          {deleted && (
+            <p role="status" className="mb-6 text-center text-sm text-accent">
+              Your account and all of its data were deleted.
+            </p>
+          )}
           <LoginForm
             next={next}
             initialError={

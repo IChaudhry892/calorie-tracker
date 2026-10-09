@@ -3,17 +3,19 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOptimistic, useState, useTransition } from "react";
-import { FoodPicker } from "@/components/FoodPicker";
+import { AddFoodForm } from "@/components/AddFoodForm";
 import { QuantityForm } from "@/components/QuantityForm";
 import { MacroTable } from "@/components/MacroTable";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
+import type { DailyTarget } from "@/lib/calories";
 import { dietRows, DietNameSchema, type DietFood, type DietItemWithFood } from "@/lib/diets";
 import { formatCalories, sumMacros } from "@/lib/macros";
 import {
   addDietItem,
+  addManualDietItem,
   deleteDiet,
   duplicateDiet,
   removeDietItem,
@@ -25,7 +27,7 @@ import { ApplyDietForm } from "../../log/ApplyDietForm";
 type DietEditorProps = {
   diet: { id: string; name: string; items: DietItemWithFood[] };
   foods: DietFood[];
-  maintenance: number | null;
+  target: DailyTarget | null;
 };
 
 type OptimisticChange = { type: "quantity"; id: string; quantity: number } | { type: "remove"; id: string };
@@ -35,7 +37,7 @@ function applyChange(items: DietItemWithFood[], change: OptimisticChange): DietI
   return items.map((item) => (item.id === change.id ? { ...item, quantity: change.quantity } : item));
 }
 
-export function DietEditor({ diet, foods, maintenance }: DietEditorProps) {
+export function DietEditor({ diet, foods, target }: DietEditorProps) {
   // Quantity edits and removals show instantly; the server copy replaces this once revalidated.
   const [items, applyOptimistic] = useOptimistic(diet.items, applyChange);
   const [rowError, setRowError] = useState<string>();
@@ -139,7 +141,7 @@ export function DietEditor({ diet, foods, maintenance }: DietEditorProps) {
             );
           }}
         />
-        {rows.length > 0 && <MaintenanceLine total={total.calories} maintenance={maintenance} />}
+        {rows.length > 0 && <GoalLine total={total.calories} target={target} />}
       </div>
 
       <Dialog open={editing !== null} onClose={() => setEditing(null)} title={`Edit ${editing?.foods.name ?? "food"}`}>
@@ -147,6 +149,7 @@ export function DietEditor({ diet, foods, maintenance }: DietEditorProps) {
           <QuantityForm
             key={editing.id}
             unit={editing.foods.serving_unit}
+            servingSize={editing.foods.serving_size}
             initial={editing.quantity}
             onSubmit={(quantity) => {
               setEditing(null);
@@ -160,12 +163,13 @@ export function DietEditor({ diet, foods, maintenance }: DietEditorProps) {
 
       <Dialog open={adding} onClose={() => setAdding(false)} title="Add food">
         {adding && (
-          <FoodPicker
+          <AddFoodForm
             key={addCount}
             foods={foods}
             submitLabel="Add to diet"
-            pendingLabel="Adding…"
-            onSubmit={(food, quantity) => addDietItem(diet.id, food.id, String(quantity))}
+            onAddFood={(food, quantity) => addDietItem(diet.id, food.id, String(quantity))}
+            onAddManual={(input) => addManualDietItem(diet.id, input)}
+            manualSavesFood
             onDone={() => setAdding(false)}
           />
         )}
@@ -270,22 +274,23 @@ function DietName({ dietId, name }: { dietId: string; name: string }) {
   );
 }
 
-function MaintenanceLine({ total, maintenance }: { total: number; maintenance: number | null }) {
-  if (maintenance == null) {
+function GoalLine({ total, target }: { total: number; target: DailyTarget | null }) {
+  if (target == null) {
     return (
       <p className="text-sm text-foreground/70">
         <Link href="/calculator" className="text-accent hover:text-accent-hover">
-          Set your maintenance calories in the Calculator
+          Set your calorie goal in the Calculator
         </Link>{" "}
-        to compare this diet against them.
+        to compare this diet against it.
       </p>
     );
   }
-  const diff = Math.round(total) - maintenance;
+  const goal = Math.round(target.calories);
+  const diff = Math.round(total) - goal;
   const comparison = diff === 0 ? "exactly your" : `${formatCalories(Math.abs(diff))} kcal ${diff < 0 ? "under" : "over"} your`;
   return (
     <p aria-live="polite" className="text-sm text-foreground/70">
-      {formatCalories(total)} kcal · {comparison} {maintenance} kcal maintenance
+      {formatCalories(total)} kcal · {comparison} {goal} kcal goal ({target.goal.label.toLowerCase()})
     </p>
   );
 }

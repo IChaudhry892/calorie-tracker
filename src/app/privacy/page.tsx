@@ -69,9 +69,10 @@ export default function PrivacyPage() {
       <section>
         <h2>Keeping and deleting your data</h2>
         <p>
-          Your data is kept until you ask for it to be deleted. To delete your account and everything in it, email{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> from the address you signed up with. Deleting the
-          account removes your profile, foods, diets, log entries and AI usage records.
+          Your data is kept until you delete it. To delete your account and everything in it, sign in and go to{" "}
+          <strong>Account → Delete account</strong>. It is removed straight away: your profile, foods, diets, log
+          entries and AI usage records. If you can&apos;t sign in, email{" "}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> from the address you signed up with instead.
         </p>
       </section>
 

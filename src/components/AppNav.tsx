@@ -79,6 +79,22 @@ function SignOutButton() {
   );
 }
 
+function AccountLink({ pathname }: { pathname: string }) {
+  const active = isActive(pathname, "/account");
+  return (
+    <Link
+      href="/account"
+      aria-current={active ? "page" : undefined}
+      // Sized like the ghost Sign out button next to it.
+      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${focusRing} ${
+        active ? "text-accent" : "text-foreground/80 hover:text-accent-hover"
+      }`}
+    >
+      Account
+    </Link>
+  );
+}
+
 export function AppNav() {
   const pathname = usePathname();
 
@@ -108,14 +124,20 @@ export function AppNav() {
               })}
             </ul>
           </nav>
-          <SignOutButton />
+          <div className="flex items-center gap-1">
+            <AccountLink pathname={pathname} />
+            <SignOutButton />
+          </div>
         </div>
       </header>
 
       {/* Mobile: slim top header + fixed bottom tab bar */}
       <header className="flex items-center justify-between bg-surface px-4 py-2 md:hidden">
         <Brand />
-        <SignOutButton />
+        <div className="flex items-center gap-1">
+          <AccountLink pathname={pathname} />
+          <SignOutButton />
+        </div>
       </header>
       <nav
         aria-label="Main"

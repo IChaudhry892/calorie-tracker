@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import type { Food } from "@/lib/db";
-import { formatServing, SERVING_UNITS, type ServingUnit } from "@/lib/foods";
+import { formatServing, SERVING_UNITS, sourceFor, type AiValues, type ServingUnit } from "@/lib/foods";
 import { estimateFood, saveFood, type FoodFormState } from "./actions";
 
 export type FoodFormFood = Pick<
@@ -29,8 +29,12 @@ export function FoodForm({ food, onDone }: { food?: FoodFormFood; onDone: () => 
   // Controlled so an AI estimate can fill them; the other fields stay uncontrolled.
   const [calories, setCalories] = useState(food?.calories.toString() ?? "");
   const [protein, setProtein] = useState(food?.protein_g.toString() ?? "");
-  // Stays "ai" once an estimate is applied, even if the numbers are then tweaked.
-  const [source, setSource] = useState(food?.source ?? "manual");
+  // The AI's numbers (the saved ones when editing an AI food). The tag stays while
+  // either field still holds one, and goes once the user has replaced both.
+  const [aiValues, setAiValues] = useState<AiValues | null>(
+    food?.source === "ai" ? { calories: food.calories, protein_g: food.protein_g } : null,
+  );
+  const source = sourceFor(aiValues, calories, protein);
   const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
   const [estimating, startEstimate] = useTransition();
 
@@ -47,9 +51,10 @@ export function FoodForm({ food, onDone }: { food?: FoodFormFood; onDone: () => 
         setNote({ text: result.error, error: true });
         return;
       }
-      setCalories(String(Math.round(result.data.calories)));
-      setProtein(String(Number(result.data.protein_g.toFixed(1))));
-      setSource("ai");
+      const estimate = { calories: Math.round(result.data.calories), protein_g: Number(result.data.protein_g.toFixed(1)) };
+      setCalories(String(estimate.calories));
+      setProtein(String(estimate.protein_g));
+      setAiValues(estimate);
       const serving = formatServing({
         serving_size: Number(input.serving_size),
         serving_unit: input.serving_unit as ServingUnit,

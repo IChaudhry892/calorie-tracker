@@ -4,13 +4,22 @@ A mobile-friendly web app for tracking calories and protein. Work out your maint
 
 **Live site: <https://calorie-tracker-chi-murex.vercel.app>**
 
+## How to use it
+
+1. **Set your goal in the Calculator.** Enter your age, sex, height, weight and activity level to see your maintenance calories. Then pick one of the 7 cards as your goal: maintain, mild weight loss, weight loss, extreme weight loss, mild weight gain, weight gain or fast weight gain. Press **Save**. That goal becomes your daily target on the Daily Log.
+2. **Add foods on the Foods page.** Give each food a serving (for example 16 g of almond butter) and its calories and protein. If you don't know the numbers, type the name and serving and press **Estimate with AI**. Foods filled in by AI get an **AI** tag. Replace both numbers with your own and the tag goes away.
+3. **Build a diet on the Diets page.** A diet is a reusable plan, such as a typical training day. Add foods from **My foods**, or type one in under **Manual** (it's saved to your food list too). Enter either a number of servings or a quantity: 3 servings of a 16 g food fills in 48 g, and the other way round.
+4. **Log each day on the Daily Log.** Either press **Apply diet** to copy a whole diet into the day and then add anything extra with **Add entry**, or just add foods one by one. The progress bar shows how much of your goal is left, and your deficit or surplus against maintenance. Use the arrows, the date picker or the week strip to look back or plan ahead.
+
+You can delete your account and all of its data at any time from **Account → Delete account**.
+
 ## Features
 
-- **Calorie calculator**: Mifflin–St Jeor BMR × activity level, with targets (and the daily surplus/deficit) for losing or gaining weight. Works in imperial or metric, and works without an account. Signed-in users can save their result as their maintenance calories.
+- **Calorie calculator**: Mifflin–St Jeor BMR × activity level, with targets (and the daily surplus/deficit) for losing or gaining weight. Works in imperial or metric, and works without an account. Signed-in users can save their details and pick one of the 7 targets as their goal.
 - **Foods**: your own list of foods with serving size, calories and protein. Search it, edit or delete foods, or let **Gemini estimate** the macros for a food (50 estimates per user per day).
-- **Diets**: named lists of foods and quantities with live totals. Duplicate them, or apply one to any day in one go.
-- **Daily log**: one page per day (`/log?date=YYYY-MM-DD`) with a Sunday–Saturday week strip, entries from your foods or entered by hand, and a progress bar showing your surplus or deficit against maintenance.
-- Email/password and Google sign-in. Every table uses Row Level Security, so users only ever see their own rows.
+- **Diets**: named lists of foods with live totals, added from your food list or by hand, by servings or by quantity. Duplicate them, or apply one to any day in one go.
+- **Daily log**: one page per day (`/log?date=YYYY-MM-DD`) with a Sunday–Saturday week strip, entries from your foods or entered by hand, and a progress bar against your goal (plus your surplus or deficit against maintenance).
+- Email/password and Google sign-in, and in-app account deletion. Every table uses Row Level Security, so users only ever see their own rows.
 - [Privacy Policy](https://calorie-tracker-chi-murex.vercel.app/privacy) and [Terms of Service](https://calorie-tracker-chi-murex.vercel.app/terms) pages (needed to publish the Google sign-in app).
 
 ## Stack

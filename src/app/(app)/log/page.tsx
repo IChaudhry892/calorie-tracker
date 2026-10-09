@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { dailyTarget } from "@/lib/calories";
 import { DateSchema, weekDays } from "@/lib/dates";
 import { dietTotals, type DietItemWithFood } from "@/lib/diets";
 import { createClient } from "@/lib/supabase/server";
@@ -23,7 +24,7 @@ export default async function LogPage({ searchParams }: PageProps<"/log">) {
   const [{ data: entries }, { data: foods }, { data: diets }, { data: claims }] = await Promise.all([
     supabase
       .from("log_entries")
-      .select("id, log_date, name, quantity, unit, calories, protein_g, source, diet_id, diets(name)")
+      .select("id, log_date, name, quantity, unit, calories, protein_g, source, diet_id, diets(name), foods(serving_size, serving_unit)")
       .gte("log_date", week[0])
       .lte("log_date", week[6])
       .order("created_at"),
@@ -33,7 +34,7 @@ export default async function LogPage({ searchParams }: PageProps<"/log">) {
   ]);
 
   const { data: profile } = claims?.claims
-    ? await supabase.from("profiles").select("maintenance_calories").eq("id", claims.claims.sub).maybeSingle()
+    ? await supabase.from("profiles").select("maintenance_calories, goal").eq("id", claims.claims.sub).maybeSingle()
     : { data: null };
 
   const dietOptions = (diets ?? []).map((diet) => {
@@ -49,7 +50,7 @@ export default async function LogPage({ searchParams }: PageProps<"/log">) {
       entries={entries ?? []}
       foods={foods ?? []}
       diets={dietOptions}
-      maintenance={profile?.maintenance_calories ?? null}
+      target={dailyTarget(profile?.maintenance_calories ?? null, profile?.goal)}
     />
   );
 }

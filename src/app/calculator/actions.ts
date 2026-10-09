@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { ACTIVITY_LEVELS, maintenanceCalories, SEXES } from "@/lib/calories";
+import { ACTIVITY_LEVELS, GOAL_KEYS, maintenanceCalories, SEXES } from "@/lib/calories";
 import { createClient } from "@/lib/supabase/server";
 
 export type SaveState = { error?: string; message?: string };
@@ -15,6 +15,7 @@ const ProfileSchema = z.object({
   height_cm: z.coerce.number().min(50).max(275),
   weight_kg: z.coerce.number().min(20).max(550),
   activity_level: z.enum(ACTIVITY_LEVELS),
+  goal: z.enum(GOAL_KEYS),
 });
 
 export async function saveProfile(_prevState: SaveState, formData: FormData): Promise<SaveState> {
@@ -38,5 +39,7 @@ export async function saveProfile(_prevState: SaveState, formData: FormData): Pr
   if (error) return { error: "Couldn't save. Please try again." };
 
   revalidatePath("/calculator");
+  revalidatePath("/log");
+  revalidatePath("/diets", "layout");
   return { message: "Saved." };
 }
