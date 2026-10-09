@@ -9,7 +9,11 @@ import { scaleMacros, sumMacros, type Macros } from "./macros";
 export type LogRow = Pick<
   LogEntry,
   "id" | "log_date" | "name" | "quantity" | "unit" | "calories" | "protein_g" | "source" | "diet_id"
-> & { diets: { name: string } | null };
+> & {
+  diets: { name: string } | null;
+  /** The food it was logged from, while it still exists: only used to offer servings when editing. */
+  foods: Pick<DietFood, "serving_size" | "serving_unit"> | null;
+};
 
 export type LogInsert = TablesInsert<"log_entries">;
 

@@ -54,3 +54,15 @@ export const FoodSchema = FoodFields
 
 export type FoodInput = z.infer<typeof FoodSchema>;
 export type FoodField = keyof FoodInput;
+
+export type AiValues = { calories: number; protein_g: number };
+
+/**
+ * "ai" while the calories or the protein still match the AI estimate. Once the
+ * user has replaced both with their own numbers, the food counts as theirs.
+ */
+export function sourceFor(ai: AiValues | null, calories: string, protein: string): "manual" | "ai" {
+  if (!ai) return "manual";
+  const matches = (value: string, estimate: number) => value.trim() !== "" && Number(value) === estimate;
+  return matches(calories, ai.calories) || matches(protein, ai.protein_g) ? "ai" : "manual";
+}

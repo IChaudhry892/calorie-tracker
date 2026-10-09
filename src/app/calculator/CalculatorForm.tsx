@@ -10,11 +10,14 @@ import {
   ACTIVITY,
   ACTIVITY_LEVELS,
   bmr,
+  GOAL_KEYS,
   goalCalories,
+  goalFor,
   maintenanceCalories,
   MIN_SAFE_CALORIES,
   SEXES,
   type ActivityLevel,
+  type GoalKey,
   type Sex,
 } from "@/lib/calories";
 import type { Profile } from "@/lib/db";
@@ -27,7 +30,7 @@ type Field = "age" | "height" | "inches" | "weight";
 
 export type CalculatorProfile = Pick<
   Profile,
-  "unit_system" | "sex" | "age" | "height_cm" | "weight_kg" | "activity_level" | "maintenance_calories"
+  "unit_system" | "sex" | "age" | "height_cm" | "weight_kg" | "activity_level" | "maintenance_calories" | "goal"
 >;
 
 const activityOptions = ACTIVITY_LEVELS.map((level) => ({
@@ -107,6 +110,7 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
   const [inches, setInches] = useState(initialImperial.inches);
   const [lb, setLb] = useState(initialImperial.lb);
   const [activity, setActivity] = useState<ActivityLevel>(oneOf(ACTIVITY_LEVELS, profile?.activity_level, "moderate"));
+  const [goal, setGoal] = useState<GoalKey>(oneOf(GOAL_KEYS, profile?.goal, "maintain"));
 
   const [saveState, saveAction, savePending] = useActionState(saveProfile, {});
 
@@ -184,7 +188,8 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
       results.body.age !== profile.age ||
       results.body.heightCm !== Number(profile.height_cm) ||
       results.body.weightKg !== Number(profile.weight_kg) ||
-      activity !== profile.activity_level);
+      activity !== profile.activity_level ||
+      goal !== profile.goal);
 
   const rateUnit = unitSystem === "metric" ? "kg" : "lb";
   const goals = results?.goals ?? [];
@@ -228,7 +233,7 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
               {SEXES.map((option) => (
                 <label
                   key={option}
-                  className="flex cursor-pointer items-center justify-center rounded-lg border border-accent/40 bg-background px-3 py-2 capitalize transition-colors has-checked:border-accent has-checked:text-accent has-focus-visible:ring-1 has-focus-visible:ring-inset has-focus-visible:ring-accent"
+                  className="flex cursor-pointer items-center justify-center rounded-lg border-2 border-accent/40 bg-background px-3 py-2 capitalize transition-colors has-checked:border-accent has-checked:text-accent has-focus-visible:ring-1 has-focus-visible:ring-inset has-focus-visible:ring-accent"
                 >
                   <input
                     type="radio"
@@ -327,20 +332,29 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
 
       <section aria-live="polite" aria-label="Results" className="flex flex-col gap-6">
         {results ? (
-          <>
-            <Card className="border-2 border-accent text-center">
-              <h2 className="text-sm font-medium uppercase tracking-wide text-foreground/70">Maintenance</h2>
-              <p className="mt-1 text-5xl font-semibold text-heading">
+          // Each card is a radio button; the picked one is saved as the Daily Log target.
+          <fieldset className="flex min-w-0 flex-col gap-6">
+            <legend className="mb-6 text-sm text-foreground/70">
+              {signedIn
+                ? "Pick your goal, then Save. The Daily Log tracks each day against it."
+                : "Pick your goal. Log in to save it as your Daily Log target."}
+            </legend>
+            <GoalOption value="maintain" selected={goal === "maintain"} onSelect={setGoal} className="items-center text-center">
+              <span className="text-sm font-medium uppercase tracking-wide text-foreground/70">Maintenance</span>
+              <span className="mt-1 text-5xl font-semibold text-heading">
                 {formatCalories(results.maintenance)}
                 <span className="ml-2 text-base font-normal text-foreground/70">kcal/day</span>
-              </p>
-              <p className="mt-2 text-sm text-foreground/70">BMR: {formatCalories(results.bmr)} kcal/day</p>
-            </Card>
+              </span>
+              <span className="mt-2 text-sm text-foreground/70">BMR: {formatCalories(results.bmr)} kcal/day</span>
+            </GoalOption>
 
             <GoalGroup title="Lose weight">
               {lossGoals.map((g) => (
                 <GoalCard
                   key={g.key}
+                  goalKey={g.key}
+                  selected={goal === g.key}
+                  onSelect={setGoal}
                   label={g.label}
                   rate={`−${unitSystem === "metric" ? g.rateKg : g.rateLb} ${rateUnit}/week`}
                   calories={g.calories}
@@ -358,6 +372,9 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
               {gainGoals.map((g) => (
                 <GoalCard
                   key={g.key}
+                  goalKey={g.key}
+                  selected={goal === g.key}
+                  onSelect={setGoal}
                   label={g.label}
                   rate={`+${unitSystem === "metric" ? g.rateKg : g.rateLb} ${rateUnit}/week`}
                   calories={g.calories}
@@ -365,7 +382,7 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
                 />
               ))}
             </GoalGroup>
-          </>
+          </fieldset>
         ) : (
           <p className="text-sm text-foreground/60">
             {(["age", "height", "inches", "weight"] as const).some(shownError)
@@ -385,6 +402,7 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
               <input type="hidden" name="height_cm" value={results.body.heightCm} />
               <input type="hidden" name="weight_kg" value={results.body.weightKg} />
               <input type="hidden" name="activity_level" value={activity} />
+              <input type="hidden" name="goal" value={goal} />
             </>
           )}
           <div className="flex flex-wrap items-center gap-3">
@@ -393,7 +411,8 @@ export function CalculatorForm({ profile, signedIn }: { profile: CalculatorProfi
             </Button>
             {profile?.maintenance_calories != null && (
               <span className="text-sm text-foreground/70">
-                Saved: {profile.maintenance_calories} kcal/day
+                Saved: {goalFor(profile.goal).label},{" "}
+                {formatCalories(profile.maintenance_calories + goalFor(profile.goal).delta)} kcal/day
                 {unsaved && <span className="text-accent"> · unsaved changes</span>}
               </span>
             )}
@@ -423,20 +442,63 @@ function GoalGroup({ title, children }: { title: string; children: ReactNode }) 
   );
 }
 
-type GoalCardProps = { label: string; rate: string; calories: number; delta: number; warning?: string };
+type GoalOptionProps = {
+  value: GoalKey;
+  selected: boolean;
+  onSelect: (goal: GoalKey) => void;
+  className?: string;
+  children: ReactNode;
+};
 
-function GoalCard({ label, rate, calories, delta, warning }: GoalCardProps) {
+/** A card that is also a radio button: the picked goal gets an accent border and a "Your goal" tag. */
+function GoalOption({ value, selected, onSelect, className = "", children }: GoalOptionProps) {
   return (
-    <Card as="li" className="flex flex-col gap-1">
-      <span className="font-medium text-heading">{label}</span>
-      <span className="text-sm text-foreground/70">{rate}</span>
-      <span className="text-2xl font-semibold text-accent">
-        {formatCalories(calories)} <span className="text-sm font-normal text-foreground/70">kcal/day</span>
-      </span>
-      <span className="text-sm text-foreground/70">
-        {formatCalories(Math.abs(delta))} kcal {delta < 0 ? "deficit" : "surplus"}
-      </span>
-      {warning && <span className="text-xs text-red-300">{warning}</span>}
-    </Card>
+    <label
+      className={`flex h-full cursor-pointer flex-col gap-1 rounded-2xl border-2 bg-surface p-4 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent md:p-6 ${
+        selected ? "border-accent" : "border-transparent hover:border-accent/40"
+      } ${className}`}
+    >
+      <input
+        type="radio"
+        name="goal-choice"
+        value={value}
+        checked={selected}
+        onChange={() => onSelect(value)}
+        className="sr-only"
+      />
+      {children}
+      {selected && (
+        <span className="mt-1 w-fit rounded bg-accent/15 px-1.5 py-0.5 text-xs font-medium text-accent">Your goal</span>
+      )}
+    </label>
+  );
+}
+
+type GoalCardProps = {
+  goalKey: GoalKey;
+  selected: boolean;
+  onSelect: (goal: GoalKey) => void;
+  label: string;
+  rate: string;
+  calories: number;
+  delta: number;
+  warning?: string;
+};
+
+function GoalCard({ goalKey, selected, onSelect, label, rate, calories, delta, warning }: GoalCardProps) {
+  return (
+    <li>
+      <GoalOption value={goalKey} selected={selected} onSelect={onSelect}>
+        <span className="font-medium text-heading">{label}</span>
+        <span className="text-sm text-foreground/70">{rate}</span>
+        <span className="text-2xl font-semibold text-accent">
+          {formatCalories(calories)} <span className="text-sm font-normal text-foreground/70">kcal/day</span>
+        </span>
+        <span className="text-sm text-foreground/70">
+          {formatCalories(Math.abs(delta))} kcal {delta < 0 ? "deficit" : "surplus"}
+        </span>
+        {warning && <span className="text-xs text-red-300">{warning}</span>}
+      </GoalOption>
+    </li>
   );
 }

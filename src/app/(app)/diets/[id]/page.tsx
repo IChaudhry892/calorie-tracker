@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { dailyTarget } from "@/lib/calories";
 import type { DietItemWithFood } from "@/lib/diets";
 import { createClient } from "@/lib/supabase/server";
 import { DietEditor } from "./DietEditor";
@@ -34,7 +35,7 @@ export default async function DietPage({ params }: PageProps<"/diets/[id]">) {
   if (!diet) notFound();
 
   const { data: profile } = claims?.claims
-    ? await supabase.from("profiles").select("maintenance_calories").eq("id", claims.claims.sub).maybeSingle()
+    ? await supabase.from("profiles").select("maintenance_calories, goal").eq("id", claims.claims.sub).maybeSingle()
     : { data: null };
 
   const items: DietItemWithFood[] = diet.diet_items;
@@ -42,7 +43,7 @@ export default async function DietPage({ params }: PageProps<"/diets/[id]">) {
     <DietEditor
       diet={{ id: diet.id, name: diet.name, items }}
       foods={foods ?? []}
-      maintenance={profile?.maintenance_calories ?? null}
+      target={dailyTarget(profile?.maintenance_calories ?? null, profile?.goal)}
     />
   );
 }

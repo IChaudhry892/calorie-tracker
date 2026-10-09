@@ -201,6 +201,7 @@ export type Database = {
         Row: {
           activity_level: string | null
           age: number | null
+          goal: string
           height_cm: number | null
           id: string
           maintenance_calories: number | null
@@ -212,6 +213,7 @@ export type Database = {
         Insert: {
           activity_level?: string | null
           age?: number | null
+          goal?: string
           height_cm?: number | null
           id: string
           maintenance_calories?: number | null
@@ -223,6 +225,7 @@ export type Database = {
         Update: {
           activity_level?: string | null
           age?: number | null
+          goal?: string
           height_cm?: number | null
           id?: string
           maintenance_calories?: number | null
@@ -239,6 +242,7 @@ export type Database = {
     }
     Functions: {
       consume_ai_quota: { Args: never; Returns: boolean }
+      delete_my_account: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

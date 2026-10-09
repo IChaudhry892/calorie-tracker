@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { copyName, DietNameSchema, QuantitySchema } from "@/lib/diets";
+import { FoodFields, proteinFitsCalories, SERVING_UNITS } from "@/lib/foods";
 import { requireUser } from "@/lib/supabase/require-user";
 
 export type DietActionResult = { error?: string };
@@ -128,6 +129,49 @@ export async function addDietItem(dietId: string, foodId: string, quantity: stri
   if (error) return { error: "Couldn't add the food." };
 
   revalidateDiet(ids.data.dietId);
+  return {};
+}
+
+const ManualItemSchema = z.object({
+  name: FoodFields.shape.name,
+  quantity: QuantitySchema,
+  unit: z.enum(SERVING_UNITS),
+  calories: FoodFields.shape.calories,
+  protein_g: FoodFields.shape.protein_g,
+  source: z.enum(["manual", "ai"]),
+});
+
+/** Manual tab: diet rows always point at a food, so this saves the food (this amount = one serving) and adds it. */
+export async function addManualDietItem(
+  dietId: string,
+  input: z.input<typeof ManualItemSchema>,
+): Promise<DietActionResult> {
+  const id = IdSchema.safeParse(dietId);
+  if (!id.success) return { error: "Couldn't add the food." };
+  const parsed = ManualItemSchema.safeParse(input);
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  if (!proteinFitsCalories(parsed.data)) return { error: "Protein can't supply more calories than the total." };
+
+  const user = await requireUser();
+  if (!user) return LOGIN_AGAIN;
+  const { supabase } = user;
+
+  const { name, quantity, unit, calories, protein_g, source } = parsed.data;
+  const { data: food, error: foodError } = await supabase
+    .from("foods")
+    .insert({ name, serving_size: quantity, serving_unit: unit, calories, protein_g, source })
+    .select("id")
+    .single();
+  if (foodError) return { error: "Couldn't save it to your foods." };
+
+  const result = await addDietItem(id.data, food.id, String(quantity));
+  if (result.error) {
+    // Two statements, no transaction: don't leave a food behind for a row that wasn't added.
+    await supabase.from("foods").delete().eq("id", food.id);
+    return result;
+  }
+
+  revalidatePath("/foods");
   return {};
 }
 

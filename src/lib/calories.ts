@@ -29,7 +29,9 @@ export function maintenanceCalories(input: BodyInput, activity: ActivityLevel): 
   return bmr(input) * ACTIVITY[activity].multiplier;
 }
 
-export type GoalKey = "maintain" | "mild_loss" | "loss" | "extreme_loss" | "mild_gain" | "gain" | "fast_gain";
+// Matches the `profiles.goal` check constraint.
+export const GOAL_KEYS = ["maintain", "mild_loss", "loss", "extreme_loss", "mild_gain", "gain", "fast_gain"] as const;
+export type GoalKey = (typeof GOAL_KEYS)[number];
 
 /** `rateKg` / `rateLb` are the weekly weight change shown next to each goal. */
 export type Goal = { key: GoalKey; label: string; rateKg: number; rateLb: number; delta: number };
@@ -48,5 +50,35 @@ export function goalCalories(maintenance: number) {
   return GOALS.map((g) => ({ ...g, calories: maintenance + g.delta }));
 }
 
+/** The saved goal (a plain text column), falling back to "maintain" for anything unknown. */
+export function goalFor(key: string | null | undefined): Goal {
+  return GOALS.find((g) => g.key === key) ?? GOALS[0];
+}
+
+export type DailyTarget = { calories: number; maintenance: number; goal: Goal };
+
+/** Daily calorie target for a saved maintenance + goal, or null before the calculator is saved. */
+export function dailyTarget(maintenance: number | null, goal: string | null | undefined): DailyTarget | null {
+  if (maintenance == null) return null;
+  const g = goalFor(goal);
+  return { calories: maintenance + g.delta, maintenance, goal: g };
+}
+
 /** Below these daily intakes calculator.net warns that a diet is unsafe. */
 export const MIN_SAFE_CALORIES: Record<Sex, number> = { male: 1500, female: 1200 };
+
+/** "a" or "an" for a whole number read aloud: an 8, an 11, an 18, an 800, an 11000, but a 1100 or a 402. */
+function article(n: number): "a" | "an" {
+  const digits = String(Math.abs(Math.round(n)));
+  // The leading group of up to 3 digits is what's spoken first ("eleven thousand", "eight hundred").
+  const lead = digits.slice(0, digits.length % 3 || 3);
+  return lead.startsWith("8") || lead === "11" || lead === "18" ? "an" : "a";
+}
+
+/** "a 402 kcal surplus", "an 800 kcal deficit", or null at exactly 0. */
+export function describeBalance(kcal: number): string | null {
+  const rounded = Math.round(kcal);
+  if (rounded === 0) return null;
+  const amount = Math.abs(rounded);
+  return `${article(amount)} ${amount} kcal ${rounded > 0 ? "surplus" : "deficit"}`;
+}
