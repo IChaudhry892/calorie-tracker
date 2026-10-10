@@ -10,7 +10,7 @@ import { ESTIMATE_FAILED, EstimateSchema, NOT_A_FOOD, parseEstimate, type Estima
 // short timeout so an overloaded model doesn't eat the whole wait.
 const MODELS = [
   { model: "gemini-3.8-flash", timeout: 10_000 },
-  { model: "gemini-3.5-flash", timeout: 20_000 },
+  { model: "gemini-3.6-flash", timeout: 20_000 },
 ];
 
 const SYSTEM_INSTRUCTION = `You are a nutrition estimator. The user message is a food name and an amount.
