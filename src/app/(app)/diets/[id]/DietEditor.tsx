@@ -161,7 +161,7 @@ export function DietEditor({ diet, foods, target }: DietEditorProps) {
         )}
       </Dialog>
 
-      <Dialog open={adding} onClose={() => setAdding(false)} title="Add food">
+      <Dialog open={adding} onClose={() => setAdding(false)} title="Add food" tall>
         {adding && (
           <AddFoodForm
             key={addCount}
