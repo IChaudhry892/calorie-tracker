@@ -223,7 +223,7 @@ export function DailyLog({ date, week, entries, foods, diets, target }: DailyLog
             key={dialogCount}
             foods={foods}
             submitLabel="Add to day"
-            onAddFood={(food, quantity) => addLogEntry({ kind: "food", date, foodId: food.id, quantity })}
+            onAddFood={([{ food, quantity }]) => addLogEntry({ kind: "food", date, foodId: food.id, quantity })}
             onAddManual={(input) => addLogEntry({ kind: "custom", date, ...input })}
             onDone={() => setDialog(null)}
           />

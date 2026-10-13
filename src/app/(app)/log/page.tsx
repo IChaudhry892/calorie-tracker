@@ -28,7 +28,7 @@ export default async function LogPage({ searchParams }: PageProps<"/log">) {
       .gte("log_date", week[0])
       .lte("log_date", week[6])
       .order("created_at"),
-    supabase.from("foods").select(FOOD_COLUMNS).order("name"),
+    supabase.from("foods").select(FOOD_COLUMNS).eq("listed", true).order("name"),
     supabase.from("diets").select(`id, name, diet_items(id, quantity, foods(${FOOD_COLUMNS}))`).order("name"),
     supabase.auth.getClaims(),
   ]);

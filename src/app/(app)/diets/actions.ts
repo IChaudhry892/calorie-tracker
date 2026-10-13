@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { copyName, DietNameSchema, QuantitySchema } from "@/lib/diets";
+import { copyName, DietNameSchema, mergeDietAdds, QuantitySchema } from "@/lib/diets";
 import { FoodFields, proteinFitsCalories, SERVING_UNITS } from "@/lib/foods";
 import { requireUser } from "@/lib/supabase/require-user";
 
@@ -101,34 +101,65 @@ export async function duplicateDiet(dietId: string): Promise<DietActionResult> {
   redirect(`/diets/${copy.id}`);
 }
 
-export async function addDietItem(dietId: string, foodId: string, quantity: string): Promise<DietActionResult> {
-  const ids = z.object({ dietId: IdSchema, foodId: IdSchema }).safeParse({ dietId, foodId });
-  if (!ids.success) return { error: "Pick a food." };
-  const parsed = QuantitySchema.safeParse(quantity);
+const DietAddsSchema = z
+  .array(z.object({ foodId: IdSchema, quantity: QuantitySchema }))
+  .min(1, "Pick a food.")
+  .max(100, "Add 100 foods or fewer at a time.");
+
+/** Adds the picked foods. A food already in the diet gets its quantity topped up instead of a second row. */
+export async function addDietItems(
+  dietId: string,
+  adds: z.input<typeof DietAddsSchema>,
+): Promise<DietActionResult> {
+  const id = IdSchema.safeParse(dietId);
+  if (!id.success) return { error: "Couldn't add the food." };
+  const parsed = DietAddsSchema.safeParse(adds);
   if (!parsed.success) return { error: firstError(parsed.error) };
 
   const user = await requireUser();
   if (!user) return LOGIN_AGAIN;
   const { supabase } = user;
 
-  const { data: last } = await supabase
+  const { data: existing, error: readError } = await supabase
     .from("diet_items")
-    .select("position")
-    .eq("diet_id", ids.data.dietId)
-    .order("position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .select("id, food_id, quantity, position")
+    .eq("diet_id", id.data)
+    .order("position");
+  if (readError) return { error: "Couldn't add the food." };
 
-  // The composite FKs reject another user's diet or food.
-  const { error } = await supabase.from("diet_items").insert({
-    diet_id: ids.data.dietId,
-    food_id: ids.data.foodId,
-    quantity: parsed.data,
-    position: (last?.position ?? -1) + 1,
-  });
-  if (error) return { error: "Couldn't add the food." };
+  const { updates, inserts, overLimit } = mergeDietAdds(existing, parsed.data);
+  if (overLimit.length > 0) {
+    return { error: "That would take a food in this diet past 10,000. Edit its row instead." };
+  }
 
-  revalidateDiet(ids.data.dietId);
+  // One statement per topped-up row (usually one or two), then one insert for the new rows.
+  for (const update of updates) {
+    const { error } = await supabase
+      .from("diet_items")
+      .update({ quantity: update.quantity })
+      .eq("id", update.id)
+      .eq("diet_id", id.data);
+    if (error) return { error: "Couldn't add the food." };
+  }
+
+  if (inserts.length > 0) {
+    const nextPosition = Math.max(-1, ...existing.map((item) => item.position)) + 1;
+    // The composite FKs reject another user's diet or food.
+    const { error } = await supabase.from("diet_items").insert(
+      inserts.map((add, index) => ({
+        diet_id: id.data,
+        food_id: add.foodId,
+        quantity: add.quantity,
+        position: nextPosition + index,
+      })),
+    );
+    if (error) {
+      revalidateDiet(id.data); // Any top-ups above did land.
+      return { error: "Couldn't add the food." };
+    }
+  }
+
+  revalidateDiet(id.data);
   return {};
 }
 
@@ -139,9 +170,13 @@ const ManualItemSchema = z.object({
   calories: FoodFields.shape.calories,
   protein_g: FoodFields.shape.protein_g,
   source: z.enum(["manual", "ai"]),
+  saveToFoods: z.boolean(),
 });
 
-/** Manual tab: diet rows always point at a food, so this saves the food (this amount = one serving) and adds it. */
+/**
+ * Manual tab: diet rows always point at a food, so this saves one (this amount = one serving) and adds it.
+ * Without `saveToFoods` the food is unlisted: hidden from the Foods page and pickers, and deleted with its last row.
+ */
 export async function addManualDietItem(
   dietId: string,
   input: z.input<typeof ManualItemSchema>,
@@ -156,22 +191,22 @@ export async function addManualDietItem(
   if (!user) return LOGIN_AGAIN;
   const { supabase } = user;
 
-  const { name, quantity, unit, calories, protein_g, source } = parsed.data;
+  const { name, quantity, unit, calories, protein_g, source, saveToFoods } = parsed.data;
   const { data: food, error: foodError } = await supabase
     .from("foods")
-    .insert({ name, serving_size: quantity, serving_unit: unit, calories, protein_g, source })
+    .insert({ name, serving_size: quantity, serving_unit: unit, calories, protein_g, source, listed: saveToFoods })
     .select("id")
     .single();
-  if (foodError) return { error: "Couldn't save it to your foods." };
+  if (foodError) return { error: "Couldn't add the food." };
 
-  const result = await addDietItem(id.data, food.id, String(quantity));
+  const result = await addDietItems(id.data, [{ foodId: food.id, quantity }]);
   if (result.error) {
     // Two statements, no transaction: don't leave a food behind for a row that wasn't added.
     await supabase.from("foods").delete().eq("id", food.id);
     return result;
   }
 
-  revalidatePath("/foods");
+  if (saveToFoods) revalidatePath("/foods");
   return {};
 }
 

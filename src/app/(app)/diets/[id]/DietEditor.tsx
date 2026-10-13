@@ -14,7 +14,7 @@ import type { DailyTarget } from "@/lib/calories";
 import { dietRows, DietNameSchema, type DietFood, type DietItemWithFood } from "@/lib/diets";
 import { formatCalories, sumMacros } from "@/lib/macros";
 import {
-  addDietItem,
+  addDietItems,
   addManualDietItem,
   deleteDiet,
   duplicateDiet,
@@ -167,9 +167,14 @@ export function DietEditor({ diet, foods, target }: DietEditorProps) {
             key={addCount}
             foods={foods}
             submitLabel="Add to diet"
-            onAddFood={(food, quantity) => addDietItem(diet.id, food.id, String(quantity))}
+            onAddFood={(picks) =>
+              addDietItems(
+                diet.id,
+                picks.map(({ food, quantity }) => ({ foodId: food.id, quantity })),
+              )
+            }
             onAddManual={(input) => addManualDietItem(diet.id, input)}
-            manualSavesFood
+            multiple
             onDone={() => setAdding(false)}
           />
         )}

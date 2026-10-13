@@ -6,10 +6,11 @@ export const metadata: Metadata = { title: "Foods" };
 
 export default async function FoodsPage() {
   const supabase = await createClient();
-  // RLS limits this to the signed-in user's foods.
+  // RLS limits this to the signed-in user's foods. Unlisted ones only exist for their diet rows.
   const { data: foods } = await supabase
     .from("foods")
     .select("id, name, serving_size, serving_unit, calories, protein_g, source")
+    .eq("listed", true)
     .order("name");
 
   return (
