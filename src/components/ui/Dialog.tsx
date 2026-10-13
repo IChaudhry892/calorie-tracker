@@ -6,6 +6,8 @@ type DialogProps = {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** A fixed height, for dialogs whose content grows while you use them (so the content doesn't move under the cursor). */
+  tall?: boolean;
   children: ReactNode;
 };
 
@@ -13,7 +15,7 @@ type DialogProps = {
  * Native modal `<dialog>`: the browser traps focus, makes the page inert and
  * restores focus to the trigger on close. Bottom sheet on mobile, centered on desktop.
  */
-export function Dialog({ open, onClose, title, children }: DialogProps) {
+export function Dialog({ open, onClose, title, tall = false, children }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -35,7 +37,7 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
         if (event.target === event.currentTarget) onClose();
       }}
       // Tailwind preflight zeroes margins, so m-auto restores native centering.
-      className="m-auto bg-surface p-0 text-foreground backdrop:bg-black/60 max-md:mx-0 max-md:mt-auto max-md:mb-0 max-md:w-full max-md:max-w-full max-md:rounded-t-2xl md:w-full md:max-w-md md:rounded-2xl"
+      className={`m-auto bg-surface p-0 text-foreground backdrop:bg-black/60 max-md:mx-0 max-md:mt-auto max-md:mb-0 max-md:w-full max-md:max-w-full max-md:rounded-t-2xl md:w-full md:max-w-md md:rounded-2xl ${tall ? "h-[85dvh]" : ""}`}
     >
       <div className="flex flex-col gap-4 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <div className="flex items-start justify-between gap-4">
