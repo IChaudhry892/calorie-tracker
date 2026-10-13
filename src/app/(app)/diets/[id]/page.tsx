@@ -28,7 +28,7 @@ export default async function DietPage({ params }: PageProps<"/diets/[id]">) {
       .eq("id", id)
       .order("position", { referencedTable: "diet_items" })
       .maybeSingle(),
-    supabase.from("foods").select(FOOD_COLUMNS).order("name"),
+    supabase.from("foods").select(FOOD_COLUMNS).eq("listed", true).order("name"),
     supabase.auth.getClaims(),
   ]);
   // RLS makes another user's diet look exactly like a missing one.

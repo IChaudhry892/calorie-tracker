@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { copyName, dietRows, dietTotals, QuantitySchema, type DietItemWithFood } from "./diets";
+import { copyName, dietRows, dietTotals, mergeDietAdds, QuantitySchema, type DietItemWithFood } from "./diets";
 
 const chicken = { id: "f1", name: "Chicken breast", serving_size: 100, serving_unit: "g", calories: 165, protein_g: 31 };
 const banana = { id: "f2", name: "Banana", serving_size: 1, serving_unit: "piece", calories: 105, protein_g: 1.3 };
@@ -50,5 +50,37 @@ describe("QuantitySchema", () => {
 
   it("accepts decimals", () => {
     expect(QuantitySchema.parse("1.5")).toBe(1.5);
+  });
+});
+
+describe("mergeDietAdds", () => {
+  const existing = [
+    { id: "i1", food_id: "burger", quantity: 1 },
+    { id: "i2", food_id: "rice", quantity: 200 },
+    { id: "i3", food_id: "burger", quantity: 3 },
+  ];
+
+  it("tops up the first existing row instead of adding a second", () => {
+    expect(mergeDietAdds(existing, [{ foodId: "burger", quantity: 1 }])).toEqual({
+      updates: [{ id: "i1", quantity: 2 }],
+      inserts: [],
+      overLimit: [],
+    });
+  });
+
+  it("inserts new foods and combines repeats within one add", () => {
+    const result = mergeDietAdds(existing, [
+      { foodId: "egg", quantity: 1 },
+      { foodId: "rice", quantity: 50 },
+      { foodId: "egg", quantity: 2 },
+    ]);
+    expect(result.inserts).toEqual([{ foodId: "egg", quantity: 3 }]);
+    expect(result.updates).toEqual([{ id: "i2", quantity: 250 }]);
+  });
+
+  it("flags foods whose combined quantity would pass 10,000", () => {
+    const result = mergeDietAdds(existing, [{ foodId: "rice", quantity: 9900 }]);
+    expect(result.overLimit).toEqual(["rice"]);
+    expect(result.updates).toEqual([]);
   });
 });

@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState, useTransition, type KeyboardEvent } from "react";
 import { estimateFood } from "@/app/(app)/foods/actions";
-import { FoodPicker } from "@/components/FoodPicker";
+import { FoodPicker, type FoodPick } from "@/components/FoodPicker";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -17,7 +17,7 @@ type TabKey = (typeof TABS)[number]["key"];
 
 const unitOptions = SERVING_UNITS.map((unit) => ({ value: unit, label: unit }));
 
-/** What the Manual tab submits. `saveToFoods` is always true when the form says `manualSavesFood`. */
+/** What the Manual tab submits. */
 export type ManualFoodInput = {
   name: string;
   quantity: string;
@@ -33,16 +33,16 @@ type Result = Promise<{ error?: string }>;
 type AddFoodFormProps = {
   foods: DietFood[];
   submitLabel: string;
-  /** Runs inside a transition; return an error to show it in the form. */
-  onAddFood: (food: DietFood, quantity: number) => Result;
+  /** Runs inside a transition; return an error to show it in the form. Gets one pick unless `multiple`. */
+  onAddFood: (picks: FoodPick[]) => Result;
   onAddManual: (input: ManualFoodInput) => Result;
-  /** Diets only hold foods from the list, so a manual diet row is always saved to it. */
-  manualSavesFood?: boolean;
+  /** My foods takes several foods at once. */
+  multiple?: boolean;
   onDone: () => void;
 };
 
 /** The Add dialog body for the Daily Log and diets: pick from My foods, or type one in (optionally AI-estimated). */
-export function AddFoodForm({ foods, submitLabel, onAddFood, onAddManual, manualSavesFood = false, onDone }: AddFoodFormProps) {
+export function AddFoodForm({ foods, submitLabel, onAddFood, onAddManual, multiple = false, onDone }: AddFoodFormProps) {
   const [tab, setTab] = useState<TabKey>(foods.length > 0 ? "food" : "manual");
   const tabRefs = useRef<Record<TabKey, HTMLButtonElement | null>>({ food: null, manual: null });
   const baseId = useId();
@@ -94,6 +94,7 @@ export function AddFoodForm({ foods, submitLabel, onAddFood, onAddManual, manual
               foods={foods}
               submitLabel={submitLabel}
               pendingLabel="Adding…"
+              multiple={multiple}
               onSubmit={onAddFood}
               onDone={onDone}
             />
@@ -101,7 +102,6 @@ export function AddFoodForm({ foods, submitLabel, onAddFood, onAddManual, manual
           {t.key === "manual" && (
             <ManualFoodForm
               submitLabel={submitLabel}
-              savesFood={manualSavesFood}
               onSubmit={onAddManual}
               onDone={onDone}
             />
@@ -114,19 +114,18 @@ export function AddFoodForm({ foods, submitLabel, onAddFood, onAddManual, manual
 
 type ManualFoodFormProps = {
   submitLabel: string;
-  savesFood: boolean;
   onSubmit: (input: ManualFoodInput) => Result;
   onDone: () => void;
 };
 
 /** Name + amount, with calories/protein typed in or filled by an AI estimate (like the Add food dialog). */
-function ManualFoodForm({ submitLabel, savesFood, onSubmit, onDone }: ManualFoodFormProps) {
+function ManualFoodForm({ submitLabel, onSubmit, onDone }: ManualFoodFormProps) {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [unit, setUnit] = useState<ServingUnit>("piece");
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
-  const [saveToFoods, setSaveToFoods] = useState(savesFood);
+  const [saveToFoods, setSaveToFoods] = useState(false);
   // "ai" while either number is still the estimate; replacing both makes it the user's own.
   const [aiValues, setAiValues] = useState<AiValues | null>(null);
   const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
@@ -165,7 +164,7 @@ function ManualFoodForm({ submitLabel, savesFood, onSubmit, onDone }: ManualFood
             calories,
             protein_g: protein,
             source: sourceFor(aiValues, calories, protein),
-            saveToFoods: savesFood || saveToFoods,
+            saveToFoods,
           });
           if (result.error) setError(result.error);
           else onDone();
@@ -234,21 +233,15 @@ function ManualFoodForm({ submitLabel, savesFood, onSubmit, onDone }: ManualFood
           onChange={(e) => setProtein(e.target.value)}
         />
       </div>
-      {savesFood ? (
-        <p className="text-sm text-foreground/70">
-          It&apos;s also saved to your foods, with this amount as one serving.
-        </p>
-      ) : (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={saveToFoods}
-            onChange={(e) => setSaveToFoods(e.target.checked)}
-            className="size-4 accent-accent"
-          />
-          Also save to my foods
-        </label>
-      )}
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={saveToFoods}
+          onChange={(e) => setSaveToFoods(e.target.checked)}
+          className="size-4 accent-accent"
+        />
+        Also save to my foods
+      </label>
       <p role="status" aria-live="polite" className="min-h-5 text-sm text-red-300">
         {error}
       </p>

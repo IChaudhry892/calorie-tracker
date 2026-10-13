@@ -106,6 +106,7 @@ export type Database = {
           calories: number
           created_at: string
           id: string
+          listed: boolean
           name: string
           protein_g: number
           serving_size: number
@@ -117,6 +118,7 @@ export type Database = {
           calories: number
           created_at?: string
           id?: string
+          listed?: boolean
           name: string
           protein_g: number
           serving_size: number
@@ -128,6 +130,7 @@ export type Database = {
           calories?: number
           created_at?: string
           id?: string
+          listed?: boolean
           name?: string
           protein_g?: number
           serving_size?: number
